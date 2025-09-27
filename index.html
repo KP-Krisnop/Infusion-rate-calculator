@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Anesthesia Infusion Calculator</title>
+<style>
+  :root{
+    --bg:#0b1220; --card:#121a2b; --muted:#8aa0c5; --accent:#53b0ff; --good:#37d67a; --warn:#ffb020; --bad:#ff5e73;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif;background:linear-gradient(135deg,#0a1020,#0d1630);}
+  .wrap{max-width:920px;margin:auto;padding:clamp(16px,3vw,32px);color:#e9f1ff}
+  h1{font-size:clamp(20px,3.8vw,30px);margin:0 0 8px}
+  p.sub{color:var(--muted);margin:0 0 18px}
+  .card{background:var(--card);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:clamp(14px,2.4vw,22px);box-shadow:0 10px 40px rgba(0,0,0,.35)}
+  .grid{display:grid;gap:12px}
+  @media (min-width:720px){.grid{grid-template-columns:1fr 1fr}}
+  label{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:6px 0 6px}
+  input,select,button,textarea{
+    width:100%;padding:12px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.1);
+    background:#0b1324;color:#eef3ff;font-size:16px;outline:none
+  }
+  input::placeholder{color:#6e84a8}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .controls{display:flex;gap:10px;flex-wrap:wrap}
+  .toggle{appearance:none;width:100%;cursor:pointer;background:#0b1324;border:1px solid rgba(255,255,255,.15)}
+  .toggle.active{background:#10233b;border-color:var(--accent);box-shadow:0 0 0 2px rgba(83,176,255,.2) inset}
+  .result{margin-top:14px;padding:14px;border-radius:12px;background:#0f1b31;border:1px solid rgba(83,176,255,.25)}
+  .result h2{margin:0 0 4px;font-size:clamp(18px,3vw,24px)}
+  .result .value{font-size:clamp(22px,4.5vw,34px);font-weight:700;letter-spacing:.02em}
+  .hint{color:var(--muted);font-size:13px;margin-top:8px}
+  .ok{color:var(--good)} .warn{color:var(--warn)} .bad{color:var(--bad)}
+  .foot{margin-top:18px;display:grid;gap:10px}
+  code{background:#0b1324;padding:2px 6px;border-radius:6px;border:1px solid rgba(255,255,255,.08)}
+
+  /* Color chip beside Medicine select */
+  .chip-row{display:flex;gap:8px;align-items:center}
+  .chip{width:14px;height:14px;border-radius:3px;border:1px solid rgba(255,255,255,.35);box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
+  .share{display:flex;gap:8px;align-items:center;margin-top:10px}
+  .share input{flex:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Anesthesia Infusion Calculator</h1>
+  <p class="sub">Uses <code>Q = (0.06 × B) / A</code> (where A = X÷Y from the chosen ratio). One medicine at a time to avoid confusion.</p>
+
+  <div class="card">
+    <div class="grid">
+      <div>
+        <label for="drug">Medicine</label>
+        <div class="chip-row">
+          <div id="drugChip" class="chip" aria-hidden="true"></div>
+          <select id="drug" aria-label="Medicine selector"></select>
+        </div>
+        <div class="share">
+          <input id="shareLink" type="text" readonly>
+          <button id="copyBtn" type="button">Copy link</button>
+        </div>
+      </div>
+      <div>
+        <label for="conc">Concentration (A = X:Y)</label>
+        <select id="conc" aria-label="Concentration selector"></select>
+      </div>
+    </div>
+
+    <div class="controls" style="margin:12px 0">
+      <button id="modeBtn" class="toggle">Mode: Forward (P,B,A ➜ Rate)</button>
+    </div>
+
+    <!-- Forward mode -->
+    <div id="forward">
+      <div class="row">
+        <div>
+          <label for="P">P (Dose mcg/kg/min)</label>
+          <input id="P" type="number" step="0.01" min="0" placeholder="e.g., 5.00" inputmode="decimal">
+        </div>
+        <div>
+          <label for="B">B (Weight kg)</label>
+          <input id="B" type="number" step="0.1" min="0" placeholder="e.g., 70.0" inputmode="decimal">
+        </div>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <div>
+          <label>Q = (0.06 × B) / A</label>
+          <input id="Qf" type="text" readonly>
+        </div>
+        <div>
+          <label>Infusion rate (ml/hr) = P × Q</label>
+          <input id="Rate" type="text" readonly>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reverse mode -->
+    <div id="reverse" style="display:none">
+      <div class="row">
+        <div>
+          <label for="RateIn">Infusion rate (ml/hr)</label>
+          <input id="RateIn" type="number" step="0.01" min="0" placeholder="e.g., 15.00" inputmode="decimal">
+        </div>
+        <div>
+          <label for="B2">B (Weight kg)</label>
+          <input id="B2" type="number" step="0.1" min="0" placeholder="e.g., 70.0" inputmode="decimal">
+        </div>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <div>
+          <label>Q = (0.06 × B) / A</label>
+          <input id="Qr" type="text" readonly>
+        </div>
+        <div>
+          <label>P (mcg/kg/min) = Rate / Q</label>
+          <input id="Pout" type="text" readonly>
+        </div>
+      </div>
+    </div>
+
+    <div class="result" id="summary">
+      <h2 id="resTitle">Result</h2>
+      <div class="value" id="resValue">—</div>
+      <div class="hint" id="limits"></div>
+      <div class="hint" id="rangeNote"></div>
+    </div>
+
+    <div class="foot">
+      <div class="hint">
+        <strong>Link formats supported</strong> → <code>#/dopamine</code>, <code>#?drug=ntg</code>, or query <code>?drug=levophed</code>.  
+        You can also pass: <code>mode=reverse</code>, <code>conc=4:250</code>, <code>p=5.00</code>, <code>b=70.0</code>, <code>rate=120.00</code> (URL will auto-encode <code>:</code>).
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ------------------ Drug configuration (with colors) ------------------ */
+const DRUGS = [
+  { id:"dopamine",   name:"Dopamine",                 pMin:1,    pMax:50, conc:["1:1","2:1"],    color:"#6cc866" },
+  { id:"dobutamine", name:"Dobutamine",               pMin:1,    pMax:40, conc:["1:1","2:1"],    color:"#f8d761" },
+  { id:"adrenaline", name:"Adrenaline",               pMin:0.01, pMax:null,conc:["1:10"],        color:"#feb1dc" },
+  { id:"levophed",   name:"Levophed (Norepinephrine)",pMin:0.01, pMax:3,  conc:["4:50","4:100","4:250"], color:"#751be3" },
+  { id:"primacor",   name:"Primacor (Milrinone)",     pMin:0.01, pMax:null,conc:["1:5"],        color:"#d088f7" },
+  { id:"ntg",        name:"NTG (Nitroglycerine)",     pMin:1,    pMax:null,conc:["1:1","2:1"],   color:"#e87c1e" },
+];
+const DRUG_INDEX = Object.fromEntries(DRUGS.map(d=>[d.id,d]));
+
+/* Synonyms for URL parsing */
+const SYNS = {
+  norepinephrine:"levophed", norepi:"levophed", noradrenaline:"levophed",
+  epinephrine:"adrenaline", milrinone:"primacor",
+  nitroglycerin:"ntg", nitroglycerine:"ntg"
+};
+
+/* ------------------ DOM helpers ------------------ */
+const $ = id => document.getElementById(id);
+const drugSel = $("drug"), concSel = $("conc"), drugChip = $("drugChip");
+const modeBtn = $("modeBtn");
+const forwardDiv = $("forward"), reverseDiv = $("reverse");
+const P = $("P"), B = $("B"), Qf = $("Qf"), Rate = $("Rate");
+const RateIn = $("RateIn"), B2 = $("B2"), Qr = $("Qr"), Pout = $("Pout");
+const resTitle = $("resTitle"), resValue = $("resValue"), limits = $("limits"), rangeNote = $("rangeNote");
+const shareLink = $("shareLink"), copyBtn = $("copyBtn");
+
+let mode = "forward"; // "forward" or "reverse"
+let booting = true;   // suppress intermediate recalc until initial state is set
+
+/* ------------------ Utility ------------------ */
+function to2(x){ return Number.isFinite(x) ? (+x).toFixed(2) : ""; }
+function to1(x){ return Number.isFinite(x) ? (+x).toFixed(1) : ""; }
+function to3(x){ return Number.isFinite(x) ? (+x).toFixed(3) : ""; }
+function parseNum(v){ const n = Number(v); return Number.isFinite(n) ? n : null; }
+
+/* ------------------ Core math ------------------ */
+function computeQ(B, A){ return (0.06 * B) / A; } // Q = (0.06×B)/A
+function computeRate(P, Q){ return P * Q; }       // ml/hr
+function computeP(rate, Q){ return rate / Q; }     // mcg/kg/min
+
+function pWithinRange(p, d){
+  if (p == null || !isFinite(p)) return null;
+  if (d.pMax == null) return (p >= d.pMin) ? "ok" : "low";
+  if (p < d.pMin) return "low";
+  if (p > d.pMax) return "high";
+  return "ok";
+}
+
+/* ------------------ URL parsing helpers ------------------ */
+function normalizeSlug(s){
+  if (!s) return null;
+  s = s.trim().toLowerCase();
+  if (SYNS[s]) s = SYNS[s];
+  return s;
+}
+function parseHashParts(){
+  // Supports "#/drug?key=val", "#?drug=...", or "#drug"
+  const raw = (location.hash || "").replace(/^#/, "");
+  let path = "", qs = "";
+  if (!raw) return {path:"", qs:""};
+  if (raw.startsWith("/")){
+    const ix = raw.indexOf("?");
+    if (ix >= 0){ path = raw.slice(1, ix); qs = raw.slice(ix+1); }
+    else { path = raw.slice(1); }
+  } else if (raw.startsWith("?")){
+    qs = raw.slice(1);
+  } else if (raw.includes("=")){
+    qs = raw; // "#key=val&..."
+  } else {
+    path = raw; // "#dopamine"
+  }
+  return {path, qs};
+}
+function getParamsFromURL(){
+  const url = new URL(location.href);
+
+  // 1) HASH first (priority)
+  const {path, qs} = parseHashParts();
+  const hashParams = new URLSearchParams(qs || "");
+  let drug = normalizeSlug(path);
+  if (!drug){
+    drug = normalizeSlug(hashParams.get("drug") || hashParams.get("med") || hashParams.get("medicine"));
+  }
+
+  // 2) QUERY (fallback if hash empty)
+  const qDrug = normalizeSlug(url.searchParams.get("drug") || url.searchParams.get("med") || url.searchParams.get("medicine"));
+  if (!drug) drug = qDrug;
+
+  // 3) PATH last segment (final fallback)
+  if (!drug){
+    const segs = (url.pathname || "").split("/").filter(Boolean);
+    if (segs.length){ drug = normalizeSlug(segs[segs.length-1]); }
+  }
+
+  // Collect key-values (prefer hash; fallback to query)
+  function pick(...keys){
+    for (const k of keys){
+      const v = hashParams.get(k);
+      if (v!=null) return v;
+    }
+    for (const k of keys){
+      const v = url.searchParams.get(k);
+      if (v!=null) return v;
+    }
+    return null;
+  }
+
+  const modeRaw = pick("mode","m","reverse","rev");
+  const concRaw = pick("conc","concentration","a");
+  const pRaw    = pick("p","dose");
+  const bRaw    = pick("b","wt","weight");
+  const rateRaw = pick("rate","mlhr","mlh","r");
+
+  // normalize
+  const mode = (()=>{
+    const s = (modeRaw||"").toString().toLowerCase();
+    if (["reverse","rev","r"].includes(s)) return "reverse";
+    if (["1","true","yes","on"].includes(s)) return "reverse";
+    return "forward";
+  })();
+
+  const conc = concRaw ? concRaw.replace(/\s+/g,"") : null; // e.g., "4:250"
+  const p    = parseNum(pRaw);
+  const b    = parseNum(bRaw);
+  const rate = parseNum(rateRaw);
+
+  return { drug, mode, conc, p, b, rate };
+}
+
+/* ------------------ Link writer ------------------ */
+function buildShareHash(){
+  const d = drugSel.value;
+  const params = new URLSearchParams();
+
+  // mode
+  params.set("mode", mode);
+
+  // conc (A)
+  if (concSel.value) params.set("conc", concSel.value);
+
+  // forward fields
+  if (P.value) params.set("p", to2(P.value));
+  if (B.value) params.set("b", to1(B.value));
+  const rateForward = Rate.value ? Number(Rate.value) : null;
+  if (rateForward!=null && isFinite(rateForward)) params.set("rate", to2(rateForward));
+
+  // reverse fields
+  if (RateIn.value) params.set("rate", to2(RateIn.value)); // reverse takes precedence for 'rate' if present
+  if (B2.value) params.set("b", to1(B2.value));            // reverse B overrides B for clarity
+  const pReverse = Pout.value ? Number(Pout.value) : null;
+  if (pReverse!=null && isFinite(pReverse)) params.set("p", to2(pReverse)); // include computed P in reverse
+
+  return `#/${d}?${params.toString()}`;
+}
+function updateShareLink(){
+  try {
+    const base = location.origin + location.pathname;
+    shareLink.value = `${base}${buildShareHash()}`;
+  } catch {
+    shareLink.value = buildShareHash();
+  }
+}
+
+/* ------------------ UI & state ------------------ */
+function populateDrugOptions(){
+  for (const d of DRUGS) {
+    const opt = document.createElement("option");
+    opt.value = d.id; opt.textContent = d.name;
+    drugSel.appendChild(opt);
+  }
+}
+function populateConcs(){
+  const d = DRUG_INDEX[drugSel.value];
+  concSel.innerHTML = "";
+  d.conc.forEach(c=>{
+    const opt = document.createElement("option");
+    opt.value = c; opt.textContent = c; concSel.appendChild(opt);
+  });
+}
+function updateChip(){
+  const d = DRUG_INDEX[drugSel.value];
+  drugChip.style.background = d ? d.color : "#444";
+  drugChip.title = d ? d.name : "";
+}
+function parseA(){
+  const [x,y] = concSel.value.split(":").map(Number);
+  return x / y;
+}
+function showMode(newMode){
+  mode = newMode;
+  forwardDiv.style.display = (mode === "forward") ? "" : "none";
+  reverseDiv.style.display = (mode === "reverse") ? "" : "none";
+  modeBtn.classList.toggle("active", mode==="reverse");
+  modeBtn.textContent = (mode === "forward")
+    ? "Mode: Forward (P,B,A ➜ Rate)"
+    : "Mode: Reverse (Rate,B,A ➜ P)";
+}
+function setIfProvided(inputEl, val, fmt){
+  if (val==null || !isFinite(val)) return;
+  inputEl.value = fmt ? fmt(val) : val;
+}
+
+/* ------------------ Recalc ------------------ */
+function recalc(){
+  const d = DRUG_INDEX[drugSel.value];
+  const A = parseA();
+
+  if (mode === "forward"){
+    const p = Number(P.value);
+    const b = Number(B.value);
+    const Q = computeQ(b, A);
+    Qf.value = isFinite(Q) ? to3(Q) : "";
+    const rate = computeRate(p, Q);
+    Rate.value = (isFinite(rate)) ? to2(rate) : "";
+
+    resTitle.textContent = "Infusion rate (ml/hr)";
+    resValue.textContent = (isFinite(rate)) ? `${to2(rate)} ml/hr` : "—";
+
+    if (d.pMax != null && isFinite(Q)) {
+      const maxRate = computeRate(d.pMax, Q);
+      limits.innerHTML = `For weight <b>${isFinite(b)?to1(b):"—"} kg</b> and concentration <b>${concSel.value}</b>, max dose is <b>${d.pMax.toFixed(2)} mcg/kg/min</b> → max infusion <b>${to2(maxRate)} ml/hr</b>.`;
+    } else {
+      limits.textContent = `No specified maximum dose in table for ${d.name}.`;
+    }
+    const status = pWithinRange(p, d);
+    rangeNote.innerHTML = rangeLine(d, status);
+
+  } else { // reverse
+    const rateIn = Number(RateIn.value);
+    const b2 = Number(B2.value);
+    const Q = computeQ(b2, A);
+    Qr.value = isFinite(Q) ? to3(Q) : "";
+    const p = computeP(rateIn, Q);
+    Pout.value = (isFinite(p)) ? to2(p) : "";
+
+    resTitle.textContent = "Required P (mcg/kg/min)";
+    resValue.textContent = (isFinite(p)) ? `${to2(p)} mcg/kg/min` : "—";
+
+    if (d.pMax != null && isFinite(Q)) {
+      const maxRate = computeRate(d.pMax, Q);
+      limits.innerHTML = `For weight <b>${isFinite(b2)?to1(b2):"—"} kg</b> and concentration <b>${concSel.value}</b>, max dose is <b>${d.pMax.toFixed(2)} mcg/kg/min</b> → max infusion <b>${to2(maxRate)} ml/hr</b>.`;
+    } else {
+      limits.textContent = `No specified maximum dose in table for ${d.name}.`;
+    }
+    const status = pWithinRange(p, d);
+    rangeNote.innerHTML = rangeLine(d, status);
+  }
+
+  if (!booting) updateShareLink();
+}
+function rangeLine(d, status){
+  const minTxt = d.pMin != null ? d.pMin.toFixed(2) : "—";
+  const maxTxt = d.pMax != null ? d.pMax.toFixed(2) : "no max";
+  const cls = status === "high" ? "bad" : status === "low" ? "warn" : "ok";
+  let label = (status==="high")?"Above max":(status==="low")?"Below min":"Within range";
+  if (d.pMax==null && status==="high") label = "Above suggested range";
+  return `<span class="${cls}">${label}</span> • Range: <b>${minTxt}</b> to <b>${maxTxt}</b> mcg/kg/min for ${d.name}.`;
+}
+
+/* ------------------ Events ------------------ */
+function attachEvents(){
+  [drugSel, concSel, P, B, RateIn, B2].forEach(el => el.addEventListener("input", recalc));
+
+  modeBtn.addEventListener("click", () => {
+    showMode(mode === "forward" ? "reverse" : "forward");
+    recalc();
+  });
+
+  drugSel.addEventListener("change", () => {
+    populateConcs();
+    updateChip();
+    recalc();
+  });
+
+  copyBtn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(shareLink.value);
+      copyBtn.textContent = "Copied!";
+      setTimeout(()=>copyBtn.textContent="Copy link", 1200);
+    } catch {
+      shareLink.select();
+      document.execCommand && document.execCommand("copy");
+    }
+  });
+
+  // React if user or external page changes the hash
+  window.addEventListener("hashchange", () => {
+    booting = true;
+    hydrateFromURL(); // re-read params
+    booting = false;
+    recalc();
+    updateShareLink();
+  });
+}
+
+/* ------------------ Hydration from URL ------------------ */
+function hydrateFromURL(){
+  const { drug, mode: m, conc, p, b, rate } = getParamsFromURL();
+
+  // Drug
+  const dId = (drug && DRUG_INDEX[drug]) ? drug : DRUGS[0].id;
+  drugSel.value = dId;
+  populateConcs();
+  updateChip();
+
+  // Mode
+  showMode(m);
+
+  // Concentration (A)
+  if (conc && Array.from(concSel.options).some(o=>o.value===conc)) {
+    concSel.value = conc;
+  }
+
+  // Values (respect formatting rules)
+  if (mode === "forward"){
+    setIfProvided(P, p, to2);
+    setIfProvided(B, b, to1);
+    // If a rate is provided in URL for forward mode, show it as computed display
+    if (rate!=null && isFinite(rate)) Rate.value = to2(rate);
+  } else {
+    setIfProvided(RateIn, rate, to2);
+    setIfProvided(B2, b, to1);
+    if (p!=null && isFinite(p)) Pout.value = to2(p);
+  }
+}
+
+/* ------------------ Init ------------------ */
+function init(){
+  populateDrugOptions();
+  attachEvents();
+  hydrateFromURL();
+  booting = false;
+  recalc();
+  updateShareLink();
+}
+init();
+</script>
+</body>
+</html>
