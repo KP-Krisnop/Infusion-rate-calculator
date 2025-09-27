@@ -29,22 +29,24 @@
   .result{margin-top:14px;padding:14px;border-radius:12px;background:#0f1b31;border:1px solid rgba(83,176,255,.25)}
   .result h2{margin:0 0 4px;font-size:clamp(18px,3vw,24px)}
   .result .value{font-size:clamp(22px,4.5vw,34px);font-weight:700;letter-spacing:.02em}
-  .hint{color:var(--muted);font-size:13px;margin-top:8px}
+  .hint{color:var(--muted);font-size:13px;margin-top:8px;line-height: 1.5}
   .ok{color:var(--good)} .warn{color:var(--warn)} .bad{color:var(--bad)}
   .foot{margin-top:18px;display:grid;gap:10px}
   code{background:#0b1324;padding:2px 6px;border-radius:6px;border:1px solid rgba(255,255,255,.08)}
 
   /* Color chip beside Medicine select */
   .chip-row{display:flex;gap:8px;align-items:center}
-  .chip{width:14px;height:14px;border-radius:3px;border:1px solid rgba(255,255,255,.35);box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
+  .chip{width:50px;height:44px;border-radius:8px;border:1px solid rgba(255,255,255,.35);box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
   .share{display:flex;gap:8px;align-items:center;margin-top:10px}
-  .share input{flex:1}
+  .share input{flex:1;}
+  .share input[type="text"] {color: var(--muted)}
+  .share button{width: 128px;}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>Anesthesia Infusion Calculator</h1>
-  <p class="sub">Uses <code>Q = (0.06 × B) / A</code> (where A = X÷Y from the chosen ratio). One medicine at a time to avoid confusion.</p>
+  <p class="sub">Uses <code>Q = (0.06 × B) / A</code> (A = X÷Y from the selected ratio). One medicine at a time to avoid confusion.</p>
 
   <div class="card">
     <div class="grid">
@@ -53,10 +55,6 @@
         <div class="chip-row">
           <div id="drugChip" class="chip" aria-hidden="true"></div>
           <select id="drug" aria-label="Medicine selector"></select>
-        </div>
-        <div class="share">
-          <input id="shareLink" type="text" readonly>
-          <button id="copyBtn" type="button">Copy link</button>
         </div>
       </div>
       <div>
@@ -124,10 +122,18 @@
       <div class="hint" id="rangeNote"></div>
     </div>
 
+    <div class="share">
+        <input class="link" id="shareLink" type="text" readonly>
+        <button id="copyBtn" type="button">Copy link</button>
+    </div>
+
     <div class="foot">
       <div class="hint">
-        <strong>Link formats supported</strong> → <code>#/dopamine</code>, <code>#?drug=ntg</code>, or query <code>?drug=levophed</code>.  
-        You can also pass: <code>mode=reverse</code>, <code>conc=4:250</code>, <code>p=5.00</code>, <code>b=70.0</code>, <code>rate=120.00</code> (URL will auto-encode <code>:</code>).
+        <strong>Shareable links (query-string)</strong> — examples:<br>
+        Forward: <code>?drug=dopamine&mode=forward&conc=2:1&p=5.00&b=70.0</code><br>
+        Reverse: <code>?drug=levophed&mode=reverse&conc=4:250&rate=120.00&b=70.0</code><br>
+        Aliases supported: <code>med|medicine</code>, <code>wt|weight</code>, <code>mlhr|mlh|r</code>, <code>rev|reverse</code>.<br>
+        Hash and path links are still accepted for backwards compatibility.
       </div>
     </div>
   </div>
@@ -163,19 +169,18 @@ const resTitle = $("resTitle"), resValue = $("resValue"), limits = $("limits"), 
 const shareLink = $("shareLink"), copyBtn = $("copyBtn");
 
 let mode = "forward"; // "forward" or "reverse"
-let booting = true;   // suppress intermediate recalc until initial state is set
+let booting = true;   // suppress URL writes during initial hydration
 
-/* ------------------ Utility ------------------ */
-function to2(x){ return Number.isFinite(x) ? (+x).toFixed(2) : ""; }
-function to1(x){ return Number.isFinite(x) ? (+x).toFixed(1) : ""; }
-function to3(x){ return Number.isFinite(x) ? (+x).toFixed(3) : ""; }
+/* ------------------ Utils ------------------ */
+function to2(x){ return Number.isFinite(+x) ? (+x).toFixed(2) : ""; }
+function to1(x){ return Number.isFinite(+x) ? (+x).toFixed(1) : ""; }
+function to3(x){ return Number.isFinite(+x) ? (+x).toFixed(3) : ""; }
 function parseNum(v){ const n = Number(v); return Number.isFinite(n) ? n : null; }
 
 /* ------------------ Core math ------------------ */
 function computeQ(B, A){ return (0.06 * B) / A; } // Q = (0.06×B)/A
 function computeRate(P, Q){ return P * Q; }       // ml/hr
 function computeP(rate, Q){ return rate / Q; }     // mcg/kg/min
-
 function pWithinRange(p, d){
   if (p == null || !isFinite(p)) return null;
   if (d.pMax == null) return (p >= d.pMin) ? "ok" : "low";
@@ -184,7 +189,7 @@ function pWithinRange(p, d){
   return "ok";
 }
 
-/* ------------------ URL parsing helpers ------------------ */
+/* ------------------ URL parsing (query preferred) ------------------ */
 function normalizeSlug(s){
   if (!s) return null;
   s = s.trim().toLowerCase();
@@ -192,7 +197,6 @@ function normalizeSlug(s){
   return s;
 }
 function parseHashParts(){
-  // Supports "#/drug?key=val", "#?drug=...", or "#drug"
   const raw = (location.hash || "").replace(/^#/, "");
   let path = "", qs = "";
   if (!raw) return {path:"", qs:""};
@@ -212,17 +216,24 @@ function parseHashParts(){
 function getParamsFromURL(){
   const url = new URL(location.href);
 
-  // 1) HASH first (priority)
+  // 1) QUERY (preferred canonical source)
+  let drug = normalizeSlug(url.searchParams.get("drug") || url.searchParams.get("med") || url.searchParams.get("medicine"));
+  let modeRaw = url.searchParams.get("mode") || url.searchParams.get("m") || url.searchParams.get("reverse") || url.searchParams.get("rev");
+  let concRaw = url.searchParams.get("conc") || url.searchParams.get("concentration") || url.searchParams.get("a");
+  let pRaw    = url.searchParams.get("p")    || url.searchParams.get("dose");
+  let bRaw    = url.searchParams.get("b")    || url.searchParams.get("wt") || url.searchParams.get("weight");
+  let rateRaw = url.searchParams.get("rate") || url.searchParams.get("mlhr") || url.searchParams.get("mlh") || url.searchParams.get("r");
+
+  // 2) HASH fallback (backward compatibility)
   const {path, qs} = parseHashParts();
   const hashParams = new URLSearchParams(qs || "");
-  let drug = normalizeSlug(path);
-  if (!drug){
-    drug = normalizeSlug(hashParams.get("drug") || hashParams.get("med") || hashParams.get("medicine"));
-  }
-
-  // 2) QUERY (fallback if hash empty)
-  const qDrug = normalizeSlug(url.searchParams.get("drug") || url.searchParams.get("med") || url.searchParams.get("medicine"));
-  if (!drug) drug = qDrug;
+  if (!drug) drug = normalizeSlug(path) ||
+    normalizeSlug(hashParams.get("drug") || hashParams.get("med") || hashParams.get("medicine"));
+  if (modeRaw == null) modeRaw = hashParams.get("mode") || hashParams.get("m") || hashParams.get("reverse") || hashParams.get("rev");
+  if (concRaw == null) concRaw = hashParams.get("conc") || hashParams.get("concentration") || hashParams.get("a");
+  if (pRaw    == null) pRaw    = hashParams.get("p")    || hashParams.get("dose");
+  if (bRaw    == null) bRaw    = hashParams.get("b")    || hashParams.get("wt") || hashParams.get("weight");
+  if (rateRaw == null) rateRaw = hashParams.get("rate") || hashParams.get("mlhr") || hashParams.get("mlh") || hashParams.get("r");
 
   // 3) PATH last segment (final fallback)
   if (!drug){
@@ -230,73 +241,57 @@ function getParamsFromURL(){
     if (segs.length){ drug = normalizeSlug(segs[segs.length-1]); }
   }
 
-  // Collect key-values (prefer hash; fallback to query)
-  function pick(...keys){
-    for (const k of keys){
-      const v = hashParams.get(k);
-      if (v!=null) return v;
-    }
-    for (const k of keys){
-      const v = url.searchParams.get(k);
-      if (v!=null) return v;
-    }
-    return null;
-  }
-
-  const modeRaw = pick("mode","m","reverse","rev");
-  const concRaw = pick("conc","concentration","a");
-  const pRaw    = pick("p","dose");
-  const bRaw    = pick("b","wt","weight");
-  const rateRaw = pick("rate","mlhr","mlh","r");
-
-  // normalize
-  const mode = (()=>{
+  const modeVal = (()=>{
     const s = (modeRaw||"").toString().toLowerCase();
     if (["reverse","rev","r"].includes(s)) return "reverse";
     if (["1","true","yes","on"].includes(s)) return "reverse";
     return "forward";
   })();
 
-  const conc = concRaw ? concRaw.replace(/\s+/g,"") : null; // e.g., "4:250"
+  const conc = concRaw ? concRaw.replace(/\s+/g,"") : null; // "4:250"
   const p    = parseNum(pRaw);
   const b    = parseNum(bRaw);
   const rate = parseNum(rateRaw);
 
-  return { drug, mode, conc, p, b, rate };
+  return { drug, mode: modeVal, conc, p, b, rate };
 }
 
-/* ------------------ Link writer ------------------ */
-function buildShareHash(){
-  const d = drugSel.value;
+/* ------------------ Build & write query URL ------------------ */
+function buildShareParams(){
   const params = new URLSearchParams();
-
-  // mode
+  params.set("drug", drugSel.value);
   params.set("mode", mode);
-
-  // conc (A)
   if (concSel.value) params.set("conc", concSel.value);
 
-  // forward fields
-  if (P.value) params.set("p", to2(P.value));
-  if (B.value) params.set("b", to1(B.value));
-  const rateForward = Rate.value ? Number(Rate.value) : null;
-  if (rateForward!=null && isFinite(rateForward)) params.set("rate", to2(rateForward));
-
-  // reverse fields
-  if (RateIn.value) params.set("rate", to2(RateIn.value)); // reverse takes precedence for 'rate' if present
-  if (B2.value) params.set("b", to1(B2.value));            // reverse B overrides B for clarity
-  const pReverse = Pout.value ? Number(Pout.value) : null;
-  if (pReverse!=null && isFinite(pReverse)) params.set("p", to2(pReverse)); // include computed P in reverse
-
-  return `#/${d}?${params.toString()}`;
+  if (mode === "forward"){
+    if (P.value) params.set("p", to2(P.value));
+    if (B.value) params.set("b", to1(B.value));
+    if (Rate.value) params.set("rate", to2(Rate.value));
+  } else {
+    if (RateIn.value) params.set("rate", to2(RateIn.value));
+    if (B2.value) params.set("b", to1(B2.value));
+    if (Pout.value) params.set("p", to2(Pout.value));
+  }
+  return params;
+}
+function buildURLWithParams(){
+  const url = new URL(location.href);
+  url.search = buildShareParams().toString();
+  url.hash = ""; // canonical: query only
+  return url.toString();
+}
+let urlTimer = null;
+const URL_DEBOUNCE_MS = 250;
+function writeURLFromState_query(){
+  const newUrl = buildURLWithParams();
+  history.replaceState(null, "", newUrl); // no history spam
+}
+function scheduleURLUpdate(){
+  clearTimeout(urlTimer);
+  urlTimer = setTimeout(writeURLFromState_query, URL_DEBOUNCE_MS);
 }
 function updateShareLink(){
-  try {
-    const base = location.origin + location.pathname;
-    shareLink.value = `${base}${buildShareHash()}`;
-  } catch {
-    shareLink.value = buildShareHash();
-  }
+  shareLink.value = buildURLWithParams();
 }
 
 /* ------------------ UI & state ------------------ */
@@ -384,7 +379,10 @@ function recalc(){
     rangeNote.innerHTML = rangeLine(d, status);
   }
 
-  if (!booting) updateShareLink();
+  if (!booting){
+    updateShareLink();
+    scheduleURLUpdate(); // live query-string update
+  }
 }
 function rangeLine(d, status){
   const minTxt = d.pMin != null ? d.pMin.toFixed(2) : "—";
@@ -421,13 +419,20 @@ function attachEvents(){
     }
   });
 
-  // React if user or external page changes the hash
-  window.addEventListener("hashchange", () => {
+  // Browser back/forward on query-string
+  window.addEventListener("popstate", () => {
     booting = true;
-    hydrateFromURL(); // re-read params
+    hydrateFromURL();
     booting = false;
     recalc();
-    updateShareLink();
+  });
+
+  // Back-compat: if someone navigates with a hash link
+  window.addEventListener("hashchange", () => {
+    booting = true;
+    hydrateFromURL();
+    booting = false;
+    recalc();
   });
 }
 
@@ -449,11 +454,10 @@ function hydrateFromURL(){
     concSel.value = conc;
   }
 
-  // Values (respect formatting rules)
+  // Values
   if (mode === "forward"){
     setIfProvided(P, p, to2);
     setIfProvided(B, b, to1);
-    // If a rate is provided in URL for forward mode, show it as computed display
     if (rate!=null && isFinite(rate)) Rate.value = to2(rate);
   } else {
     setIfProvided(RateIn, rate, to2);
