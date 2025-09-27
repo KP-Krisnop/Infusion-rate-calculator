@@ -9,46 +9,93 @@
     --bg:#0b1220; --card:#121a2b; --muted:#8aa0c5; --accent:#53b0ff; --good:#37d67a; --warn:#ffb020; --bad:#ff5e73;
   }
   *{box-sizing:border-box}
-  /* html{background-color: var(--bg);} */
   body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif;background:linear-gradient(135deg,#0a1020,#0d1630)}
   .wrap{max-width:920px;margin:auto;padding:clamp(16px,3vw,32px);color:#e9f1ff}
   h1{font-size:clamp(20px,3.8vw,30px);margin:0 0 8px}
   p.sub{color:var(--muted);margin:0 0 18px}
-  .card{background:var(--card);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:clamp(14px,2.4vw,22px);box-shadow:0 10px 40px rgba(0,0,0,.35);min-width: 300px}
+  .card{background:var(--card);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:clamp(14px,2.4vw,22px);box-shadow:0 10px 40px rgba(0,0,0,.35);min-width:300px}
   .grid{display:grid;gap:12px}
-  @media (min-width:720px){.grid{grid-template-columns:1fr 1fr}}
+  @media (min-width:540px){.grid{grid-template-columns:1fr 1fr}}
   label{display:block;font-size:12px;letter-spacing:.06em;color:var(--muted);margin:6px 0 6px}
   input,select,button,textarea{
     width:100%;padding:12px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.1);
     background:#0b1324;color:#eef3ff;font-size:16px;outline:none
   }
   input::placeholder{color:#6e84a8}
-  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .controls{display:flex;gap:10px;flex-wrap:wrap}
   .toggle{appearance:none;width:100%;cursor:pointer;background:#0b1324;border:1px solid rgba(255,255,255,.15)}
   .toggle.active{background:#10233b;border-color:var(--accent);box-shadow:0 0 0 2px rgba(83,176,255,.2) inset}
   .result{margin-top:14px;padding:14px;border-radius:12px;background:#0f1b31;border:1px solid rgba(83,176,255,.25)}
   .result h2{margin:0 0 4px;font-size:clamp(18px,3vw,24px)}
   .result .value{font-size:clamp(22px,4.5vw,34px);font-weight:700;letter-spacing:.02em}
-  .hint{color:var(--muted);font-size:13px;margin-top:8px;line-height: 1.5;min-width: 10px;}
+  .hint{color:var(--muted);font-size:13px;margin-top:8px;line-height:1.5;min-width:10px;}
   .ok{color:var(--good)} .warn{color:var(--warn)} .bad{color:var(--bad)}
   .foot{margin-top:18px;display:grid;gap:10px}
-  code{background:#0b1324;padding:2px 6px;border-radius:6px;border:1px solid rgba(255,255,255,.08);overflow-wrap: break-word}
+  code{background:#0b1324;padding:2px 6px;border-radius:6px;border:1px solid rgba(255,255,255,.08);overflow-wrap:break-word}
 
   /* Color chip beside Medicine select */
   .chip-row{display:flex;gap:8px;align-items:center}
   .chip{width:50px;height:44px;border-radius:8px;border:1px solid rgba(255,255,255,.35);box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
   .share{display:flex;gap:8px;align-items:center;margin-top:10px}
   .share input{flex:1;}
-  .share input[type="text"] {color: var(--muted)}
-  .share button{width: 128px;}
+  .share input[type="text"]{color:var(--muted)}
+  .share button{width:128px;}
+
+    /* ===== Responsive calc grids (final) ===== */
+    .calc-grid{display:grid;gap:12px;width:100%}
+    .calc-grid > *{min-width:0} /* allow inputs to shrink on small screens */
+
+    /* Map wrappers to named areas */
+    .g-dose{grid-area:dose}
+    .g-weight{grid-area:weight}
+    .g-rate{grid-area:rate}
+
+    .g-ratein{grid-area:ratein}
+    .g-weight2{grid-area:weight2} 
+    .g-pout{grid-area:pout}
+
+    /* Mobile-first: stacked full width */
+    .calc-grid--forward{
+    grid-template-columns:1fr;
+    grid-template-areas:
+        "dose"
+        "weight"
+        "rate";
+    }
+    .calc-grid--reverse{
+    grid-template-columns:1fr;
+    grid-template-areas:
+        "ratein"
+        "weight2"
+        "pout";
+    }
+
+    /* ≥720px: two inputs top, output spans both columns */
+    @media (min-width:540px){
+    .calc-grid--forward{
+        grid-template-columns:1fr 1fr;
+        grid-template-areas:
+        "dose   weight"
+        "rate   rate";
+    }
+    .calc-grid--reverse{
+        grid-template-columns:1fr 1fr;
+        grid-template-areas:
+        "ratein weight2"
+        "pout   pout";
+    }
+
+    /* Extra safety: force span across all columns even if areas get overridden */
+    .calc-grid--forward .g-rate{grid-column:1 / -1}
+    .calc-grid--reverse .g-pout{grid-column:1 / -1}
+    }
+
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>Anesthesia Infusion Calculator</h1>
-  <!-- <p class="sub">Uses <code>Q = (0.06 × B) / A</code> (A = X÷Y from the selected ratio). One medicine at a time to avoid confusion.</p> -->
-  <p class="sub">This Calculator converts does (mcg/kg/min) to infusion rate (ml/hr) or vise versa.</p>
+  <p class="sub">This calculator converts dose (mcg/kg/min) ⇄ infusion rate (mL/hr).</p>
 
   <div class="card">
     <div class="grid">
@@ -69,52 +116,42 @@
       <button id="modeBtn" class="toggle">Mode: Forward (mcg/kg/min → mL/hr)</button>
     </div>
 
-    <!-- Forward mode -->
-    <div id="forward">
-      <div class="row">
-        <div>
-          <label for="P">Dose (mcg/kg/min)</label>
-          <input id="P" type="number" step="0.01" min="0" placeholder="e.g., 5.00" inputmode="decimal" onclick="this.select();" />
-        </div>
-        <div>
-          <label for="B">Weight (kg)</label>
-          <input id="B" type="number" step="0.1" min="0" placeholder="e.g., 70.0" inputmode="decimal" onclick="this.select();" />
-        </div>
+    <!-- Forward mode (Dose & Weight on top, Rate full-width below) -->
+    <div id="forward" class="calc-grid calc-grid--forward">
+      <div class="g-dose">
+        <label for="P">Dose (mcg/kg/min)</label>
+        <input id="P" type="number" step="0.01" min="0" placeholder="e.g., 5.00" inputmode="decimal" onclick="this.select();" />
       </div>
-      <div class="row" style="margin-top:12px">
-        <div hidden="true">
-          <label>Q = (0.06 × B) / A</label>
-          <input id="Qf" type="text" readonly>
-        </div>
-        <div>
-          <label>Infusion rate (mL/hr)</label>
-          <input id="Rate" type="text" readonly>
-        </div>
+      <div class="g-weight">
+        <label for="B">Weight (kg)</label>
+        <input id="B" type="number" step="0.1" min="0" placeholder="e.g., 70.0" inputmode="decimal" onclick="this.select();" />
+      </div>
+      <div class="g-rate">
+        <label>Infusion rate (mL/hr)</label>
+        <input id="Rate" type="text" readonly />
       </div>
     </div>
 
-    <!-- Reverse mode -->
-    <div id="reverse" style="display:none">
-      <div class="row">
-        <div>
-          <label for="RateIn">Infusion rate (mL/hr)</label>
-          <input id="RateIn" type="number" step="0.01" min="0" placeholder="e.g., 15.00" inputmode="decimal" onclick="this.select();" />
-        </div>
-        <div>
-          <label for="B2">B (Weight kg)</label>
-          <input id="B2" type="number" step="0.1" min="0" placeholder="e.g., 70.0" inputmode="decimal" onclick="this.select();" />
-        </div>
+    <!-- Reverse mode (Rate & Weight on top, Dose full-width below) -->
+    <div id="reverse" class="calc-grid calc-grid--reverse" style="display:none">
+      <div class="g-ratein">
+        <label for="RateIn">Infusion rate (mL/hr)</label>
+        <input id="RateIn" type="number" step="0.01" min="0" placeholder="e.g., 15.00" inputmode="decimal" onclick="this.select();" />
       </div>
-      <div class="row" style="margin-top:12px">
-        <div hidden="true">
-          <label>Q = (0.06 × B) / A</label>
-          <input id="Qr" type="text" readonly>
-        </div>
-        <div>
-          <label>P (mcg/kg/min) = Rate / Q</label>
-          <input id="Pout" type="text" readonly>
-        </div>
+      <div class="g-weight2">
+        <label for="B2">Weight (kg)</label>
+        <input id="B2" type="number" step="0.1" min="0" placeholder="e.g., 70.0" inputmode="decimal" onclick="this.select();" />
       </div>
+      <div class="g-pout">
+        <label>Dose (mcg/kg/min)</label>
+        <input id="Pout" type="text" readonly />
+      </div>
+    </div>
+
+    <!-- Hidden Q fields so calculations stay intact (not displayed) -->
+    <div style="display:none" aria-hidden="true">
+      <input id="Qf" type="text" readonly />
+      <input id="Qr" type="text" readonly />
     </div>
 
     <div class="result" id="summary">
@@ -125,8 +162,8 @@
     </div>
 
     <div class="share">
-        <input class="link" id="shareLink" type="text" readonly>
-        <button id="copyBtn" type="button">Copy link</button>
+      <input class="link" id="shareLink" type="text" readonly>
+      <button id="copyBtn" type="button">Copy link</button>
     </div>
 
     <div class="foot">
@@ -368,7 +405,7 @@ function recalc(){
     const p = computeP(rateIn, Q);
     Pout.value = (isFinite(p)) ? to2(p) : "";
 
-    resTitle.textContent = "Required P (mcg/kg/min)";
+    resTitle.textContent = "Required Dose (mcg/kg/min)";
     resValue.textContent = (isFinite(p)) ? `${to2(p)} mcg/kg/min` : "—";
 
     if (d.pMax != null && isFinite(Q)) {
