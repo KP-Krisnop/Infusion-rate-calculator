@@ -9,11 +9,12 @@
     --bg:#0b1220; --card:#121a2b; --muted:#8aa0c5; --accent:#53b0ff; --good:#37d67a; --warn:#ffb020; --bad:#ff5e73;
   }
   *{box-sizing:border-box}
-  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif;background:linear-gradient(135deg,#0a1020,#0d1630);}
+  /* html{background-color: var(--bg);} */
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif;background:linear-gradient(135deg,#0a1020,#0d1630)}
   .wrap{max-width:920px;margin:auto;padding:clamp(16px,3vw,32px);color:#e9f1ff}
   h1{font-size:clamp(20px,3.8vw,30px);margin:0 0 8px}
   p.sub{color:var(--muted);margin:0 0 18px}
-  .card{background:var(--card);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:clamp(14px,2.4vw,22px);box-shadow:0 10px 40px rgba(0,0,0,.35)}
+  .card{background:var(--card);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:clamp(14px,2.4vw,22px);box-shadow:0 10px 40px rgba(0,0,0,.35);min-width: 300px}
   .grid{display:grid;gap:12px}
   @media (min-width:720px){.grid{grid-template-columns:1fr 1fr}}
   label{display:block;font-size:12px;letter-spacing:.06em;color:var(--muted);margin:6px 0 6px}
@@ -32,7 +33,7 @@
   .hint{color:var(--muted);font-size:13px;margin-top:8px;line-height: 1.5;min-width: 10px;}
   .ok{color:var(--good)} .warn{color:var(--warn)} .bad{color:var(--bad)}
   .foot{margin-top:18px;display:grid;gap:10px}
-  code{background:#0b1324;padding:2px 6px;border-radius:6px;border:1px solid rgba(255,255,255,.08)}
+  code{background:#0b1324;padding:2px 6px;border-radius:6px;border:1px solid rgba(255,255,255,.08);overflow-wrap: break-word}
 
   /* Color chip beside Medicine select */
   .chip-row{display:flex;gap:8px;align-items:center}
