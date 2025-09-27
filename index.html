@@ -1,557 +1,930 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Anesthesia Infusion Calculator</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --bg:#0b1220; --card:#121a2b; --muted:#8aa0c5; --accent:#53b0ff; --good:#37d67a; --warn:#ffb020; --bad:#ff5e73;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif;background:linear-gradient(135deg,#0a1020,#0d1630)}
-  [lang="th"] {font-family: "Prompt", system-ui, -apple-system, "Segoe UI", Roboto, Inter, sans-serif}
-  .wrap{max-width:920px;margin:auto;padding:clamp(16px,3vw,32px);color:#e9f1ff}
-  h1{font-size:clamp(20px,3.8vw,30px);margin:0 0 8px}
-  p.sub{color:var(--muted);margin:0 0 18px}
-  .card{background:var(--card);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:clamp(14px,2.4vw,22px);box-shadow:0 10px 40px rgba(0,0,0,.35);min-width:300px}
-  .grid{display:grid;gap:12px}
-  @media (min-width:540px){.grid{grid-template-columns:1fr 1fr}}
-  label{display:block;font-size:12px;letter-spacing:.06em;color:var(--muted);margin:6px 0 6px}
-  input,select,button,textarea{
-    width:100%;padding:12px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.1);
-    background:#0b1324;color:#eef3ff;font-size:16px;outline:none
-  }
-  input::placeholder{color:#6e84a8}
-  .controls{display:flex;gap:10px;flex-wrap:wrap}
-  .toggle{appearance:none;width:100%;cursor:pointer;background:var(--card);border:1px solid rgba(255,255,255,.15)}
-  .toggle.active{background:#10233b;border-color:var(--accent);box-shadow:0 0 0 2px rgba(83,176,255,.2) inset}
-  .result{margin-top:14px;padding:14px;border-radius:12px;background:#0f1b31;border:1px solid rgba(83,176,255,.25)}
-  .result h2{margin:0 0 4px;font-size:clamp(18px,3vw,24px)}
-  .result .value{font-size:clamp(22px,4.5vw,34px);font-weight:700;letter-spacing:.02em}
-  .hint{color:var(--muted);font-size:13px;margin-top:8px;line-height:1.5;min-width:10px;}
-  .ok{color:var(--good)} .warn{color:var(--warn)} .bad{color:var(--bad)}
-  .foot{margin-top:18px;display:grid;gap:10px}
-  code{background:#0b1324;padding:2px 6px;border-radius:6px;border:1px solid rgba(255,255,255,.08);overflow-wrap:break-word}
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="This website determines the infusion rates for anesthetic drugs."
+    />
+    <title>Anesthesia Infusion Calculator</title>
+    <link rel="icon" type="image/x-icon" href="syringe.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0b1220;
+        --card: #121a2b;
+        --muted: #8aa0c5;
+        --accent: #53b0ff;
+        --good: #37d67a;
+        --warn: #ffb020;
+        --bad: #ff5e73;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter,
+          Helvetica, Arial, sans-serif;
+        background: linear-gradient(135deg, #0a1020, #0d1630);
+      }
+      [lang="th"] {
+        font-family: "Prompt", system-ui, -apple-system, "Segoe UI", Roboto,
+          Inter, sans-serif;
+      }
+      .wrap {
+        max-width: 920px;
+        margin: auto;
+        padding: clamp(16px, 3vw, 32px);
+        color: #e9f1ff;
+      }
+      h1 {
+        font-size: clamp(20px, 3.8vw, 30px);
+        margin: 0 0 8px;
+      }
+      p.sub {
+        color: var(--muted);
+        margin: 0 0 18px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 16px;
+        padding: clamp(14px, 2.4vw, 22px);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+        min-width: 300px;
+      }
+      .grid {
+        display: grid;
+        gap: 12px;
+      }
+      @media (min-width: 540px) {
+        .grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      label {
+        display: block;
+        font-size: 12px;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+        margin: 6px 0 6px;
+      }
+      input,
+      select,
+      button,
+      textarea {
+        width: 100%;
+        padding: 12px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: #0b1324;
+        color: #eef3ff;
+        font-size: 16px;
+        outline: none;
+      }
+      input::placeholder {
+        color: #6e84a8;
+      }
+      .controls {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .toggle {
+        appearance: none;
+        width: 100%;
+        cursor: pointer;
+        background: var(--card);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+      }
+      .toggle.active {
+        background: #10233b;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(83, 176, 255, 0.2) inset;
+      }
+      .result {
+        margin-top: 14px;
+        padding: 14px;
+        border-radius: 12px;
+        background: #0f1b31;
+        border: 1px solid rgba(83, 176, 255, 0.25);
+      }
+      .result h2 {
+        margin: 0 0 4px;
+        font-size: clamp(18px, 3vw, 24px);
+      }
+      .result .value {
+        font-size: clamp(22px, 4.5vw, 34px);
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+      .hint {
+        color: var(--muted);
+        font-size: 13px;
+        margin-top: 8px;
+        line-height: 1.5;
+        min-width: 10px;
+      }
+      .ok {
+        color: var(--good);
+      }
+      .warn {
+        color: var(--warn);
+      }
+      .bad {
+        color: var(--bad);
+      }
+      .foot {
+        margin-top: 18px;
+        display: grid;
+        gap: 10px;
+      }
+      code {
+        background: #0b1324;
+        padding: 2px 6px;
+        border-radius: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        overflow-wrap: break-word;
+      }
 
-  /* Color chip beside Medicine select */
-  .chip-row{display:flex;gap:8px;align-items:center}
-  .chip{width:50px;height:44px;border-radius:8px;border:1px solid rgba(255,255,255,.35);box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
-  .share{display:flex;gap:8px;align-items:center;margin-top:10px}
-  .share input{flex:1;}
-  .share input[type="text"]{color:var(--muted)}
-  .share button{width:128px;}
+      /* Color chip beside Medicine select */
+      .chip-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .chip {
+        width: 50px;
+        height: 44px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+      }
+      .share {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-top: 10px;
+      }
+      .share input {
+        flex: 1;
+      }
+      .share input[type="text"] {
+        color: var(--muted);
+      }
+      .share button {
+        width: 128px;
+      }
 
-  /* ===== Responsive calc grids (final) ===== */
-  .calc-grid{display:grid;gap:12px;width:100%}
-  .calc-grid > *{min-width:0}
+      /* ===== Responsive calc grids (final) ===== */
+      .calc-grid {
+        display: grid;
+        gap: 12px;
+        width: 100%;
+      }
+      .calc-grid > * {
+        min-width: 0;
+      }
 
-  /* map areas */
-  .g-dose{grid-area:dose}
-  .g-weight{grid-area:weight}
-  .g-rate{grid-area:rate}
-  .g-ratein{grid-area:ratein}
-  .g-weight2{grid-area:weight2}
-  .g-pout{grid-area:pout}
+      /* map areas */
+      .g-dose {
+        grid-area: dose;
+      }
+      .g-weight {
+        grid-area: weight;
+      }
+      .g-rate {
+        grid-area: rate;
+      }
+      .g-ratein {
+        grid-area: ratein;
+      }
+      .g-weight2 {
+        grid-area: weight2;
+      }
+      .g-pout {
+        grid-area: pout;
+      }
 
-  /* Mobile-first: stacked */
-  .calc-grid--forward{
-    grid-template-columns:1fr;
-    grid-template-areas:
-      "dose"
-      "weight"
-      "rate";
-  }
-  .calc-grid--reverse{
-    grid-template-columns:1fr;
-    grid-template-areas:
-      "ratein"
-      "weight2"
-      "pout";
-  }
+      /* Mobile-first: stacked */
+      .calc-grid--forward {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+          "dose"
+          "weight"
+          "rate";
+      }
+      .calc-grid--reverse {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+          "ratein"
+          "weight2"
+          "pout";
+      }
 
-  /* ≥540px: two inputs top, output full width */
-  @media (min-width:540px){
-    .calc-grid--forward{
-      grid-template-columns:1fr 1fr;
-      grid-template-areas:
-        "dose   weight"
-        "rate   rate";
-    }
-    .calc-grid--reverse{
-      grid-template-columns:1fr 1fr;
-      grid-template-areas:
-        "ratein weight2"
-        "pout   pout";
-    }
-    .calc-grid--forward .g-rate{grid-column:1 / -1}
-    .calc-grid--reverse .g-pout{grid-column:1 / -1}
-  }
-</style>
-</head>
-<body>
-<div class="wrap">
-  <h1>Anesthesia Infusion Calculator</h1>
-  <p class="sub">This calculator converts dose (mcg/kg/min) ⇄ infusion rate (mL/hr).</p>
+      /* ≥540px: two inputs top, output full width */
+      @media (min-width: 540px) {
+        .calc-grid--forward {
+          grid-template-columns: 1fr 1fr;
+          grid-template-areas:
+            "dose   weight"
+            "rate   rate";
+        }
+        .calc-grid--reverse {
+          grid-template-columns: 1fr 1fr;
+          grid-template-areas:
+            "ratein weight2"
+            "pout   pout";
+        }
+        .calc-grid--forward .g-rate {
+          grid-column: 1 / -1;
+        }
+        .calc-grid--reverse .g-pout {
+          grid-column: 1 / -1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Anesthesia Infusion Calculator</h1>
+      <p class="sub">
+        This calculator converts dose (mcg/kg/min) ⇄ infusion rate (mL/hr).
+      </p>
 
-  <div class="card">
-    <div class="grid">
-      <div>
-        <label for="drug">Medicine</label>
-        <div class="chip-row">
-          <div id="drugChip" class="chip" aria-hidden="true"></div>
-          <select id="drug" aria-label="Medicine selector"></select>
+      <div class="card">
+        <div class="grid">
+          <div>
+            <label for="drug">Medicine</label>
+            <div class="chip-row">
+              <div id="drugChip" class="chip" aria-hidden="true"></div>
+              <select id="drug" aria-label="Medicine selector"></select>
+            </div>
+          </div>
+          <div>
+            <label for="conc">Concentration</label>
+            <select id="conc" aria-label="Concentration selector"></select>
+          </div>
+        </div>
+
+        <div class="controls" style="margin: 12px 0">
+          <!-- Initial text will be replaced by JS on load -->
+          <button id="modeBtn" class="toggle">
+            mcg/kg/min → mL/hr (Tap to change mode)
+          </button>
+        </div>
+
+        <!-- Forward mode -->
+        <div id="forward" class="calc-grid calc-grid--forward">
+          <div class="g-dose">
+            <label for="P">Dose (mcg/kg/min)</label>
+            <input
+              id="P"
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="e.g., 5.00"
+              inputmode="decimal"
+              onclick="this.select();"
+            />
+          </div>
+          <div class="g-weight">
+            <label for="B">Weight (kg)</label>
+            <input
+              id="B"
+              type="number"
+              step="0.1"
+              min="0"
+              placeholder="e.g., 70.0"
+              inputmode="decimal"
+              onclick="this.select();"
+            />
+          </div>
+          <div class="g-rate">
+            <label>Infusion rate (mL/hr)</label>
+            <input id="Rate" type="text" readonly />
+          </div>
+        </div>
+
+        <!-- Reverse mode -->
+        <div
+          id="reverse"
+          class="calc-grid calc-grid--reverse"
+          style="display: none"
+        >
+          <div class="g-ratein">
+            <label for="RateIn">Infusion rate (mL/hr)</label>
+            <input
+              id="RateIn"
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="e.g., 15.00"
+              inputmode="decimal"
+              onclick="this.select();"
+            />
+          </div>
+          <div class="g-weight2">
+            <label for="B2">Weight (kg)</label>
+            <input
+              id="B2"
+              type="number"
+              step="0.1"
+              min="0"
+              placeholder="e.g., 70.0"
+              inputmode="decimal"
+              onclick="this.select();"
+            />
+          </div>
+          <div class="g-pout">
+            <label>Dose (mcg/kg/min)</label>
+            <input id="Pout" type="text" readonly />
+          </div>
+        </div>
+
+        <!-- Hidden Q fields -->
+        <div style="display: none" aria-hidden="true">
+          <input id="Qf" type="text" readonly />
+          <input id="Qr" type="text" readonly />
+        </div>
+
+        <div class="result" id="summary">
+          <h2 id="resTitle">Result</h2>
+          <div class="value" id="resValue">—</div>
+          <div class="hint" id="limits"></div>
+          <div class="hint" id="rangeNote"></div>
+        </div>
+
+        <div class="share">
+          <input class="link" id="shareLink" type="text" readonly />
+          <button id="copyBtn" type="button">Copy link</button>
+        </div>
+
+        <div class="foot">
+          <div class="hint">
+            <strong>Shareable links (query-string)</strong> — examples:<br />
+            Forward:
+            <code
+              >?drug=dopamine&mode=forward&conc=2:1&p=5.00&b=70.0&lang=en</code
+            ><br />
+            Reverse:
+            <code
+              >?drug=levophed&mode=reverse&conc=4:250&rate=120.00&b=70.0&lang=th</code
+            ><br />
+            Language param: <code>lang=en</code> or <code>lang=th</code>.
+            Aliases: <code>language</code>, <code>locale</code>.<br />
+            Other aliases: <code>med|medicine</code>, <code>wt|weight</code>,
+            <code>mlhr|mlh|r</code>, <code>rev|reverse</code>.
+          </div>
         </div>
       </div>
-      <div>
-        <label for="conc">Concentration</label>
-        <select id="conc" aria-label="Concentration selector"></select>
-      </div>
     </div>
 
-    <div class="controls" style="margin:12px 0">
-      <!-- Initial text will be replaced by JS on load -->
-      <button id="modeBtn" class="toggle">mcg/kg/min → mL/hr (Tap to change mode)</button>
-    </div>
+    <script>
+      /* ------------------ Drug configuration (with colors) ------------------ */
+      const DRUGS = [
+        {
+          id: "dopamine",
+          name: "Dopamine",
+          pMin: 1,
+          pMax: 50,
+          conc: ["1:1", "2:1"],
+          color: "#6cc866",
+        },
+        {
+          id: "dobutamine",
+          name: "Dobutamine",
+          pMin: 1,
+          pMax: 40,
+          conc: ["1:1", "2:1"],
+          color: "#f8d761",
+        },
+        {
+          id: "adrenaline",
+          name: "Adrenaline",
+          pMin: 0.01,
+          pMax: null,
+          conc: ["1:10"],
+          color: "#feb1dc",
+        },
+        {
+          id: "levophed",
+          name: "Levophed (Norepinephrine)",
+          pMin: 0.01,
+          pMax: 3,
+          conc: ["8:100", "4:100", "4:250"],
+          color: "#751be3",
+        },
+        {
+          id: "primacor",
+          name: "Primacor (Milrinone)",
+          pMin: 0.01,
+          pMax: null,
+          conc: ["1:5"],
+          color: "#d088f7",
+        },
+        {
+          id: "ntg",
+          name: "NTG (Nitroglycerine)",
+          pMin: 1,
+          pMax: null,
+          conc: ["1:1", "2:1"],
+          color: "#e87c1e",
+        },
+      ];
+      const DRUG_INDEX = Object.fromEntries(DRUGS.map((d) => [d.id, d]));
 
-    <!-- Forward mode -->
-    <div id="forward" class="calc-grid calc-grid--forward">
-      <div class="g-dose">
-        <label for="P">Dose (mcg/kg/min)</label>
-        <input id="P" type="number" step="0.01" min="0" placeholder="e.g., 5.00" inputmode="decimal" onclick="this.select();" />
-      </div>
-      <div class="g-weight">
-        <label for="B">Weight (kg)</label>
-        <input id="B" type="number" step="0.1" min="0" placeholder="e.g., 70.0" inputmode="decimal" onclick="this.select();" />
-      </div>
-      <div class="g-rate">
-        <label>Infusion rate (mL/hr)</label>
-        <input id="Rate" type="text" readonly />
-      </div>
-    </div>
+      /* Synonyms for URL parsing */
+      const SYNS = {
+        norepinephrine: "levophed",
+        norepi: "levophed",
+        noradrenaline: "levophed",
+        epinephrine: "adrenaline",
+        milrinone: "primacor",
+        nitroglycerin: "ntg",
+        nitroglycerine: "ntg",
+      };
 
-    <!-- Reverse mode -->
-    <div id="reverse" class="calc-grid calc-grid--reverse" style="display:none">
-      <div class="g-ratein">
-        <label for="RateIn">Infusion rate (mL/hr)</label>
-        <input id="RateIn" type="number" step="0.01" min="0" placeholder="e.g., 15.00" inputmode="decimal" onclick="this.select();" />
-      </div>
-      <div class="g-weight2">
-        <label for="B2">Weight (kg)</label>
-        <input id="B2" type="number" step="0.1" min="0" placeholder="e.g., 70.0" inputmode="decimal" onclick="this.select();" />
-      </div>
-      <div class="g-pout">
-        <label>Dose (mcg/kg/min)</label>
-        <input id="Pout" type="text" readonly />
-      </div>
-    </div>
+      /* ---------- i18n (English / Thai) ---------- */
+      let LANG = "en";
+      const I18N = {
+        en: {
+          below: "Below min",
+          within: "Within range",
+          above: "Above max",
+          range(min, max, drug) {
+            return ` • Range: <b>${min}</b> to <b>${max}</b> mcg/kg/min for ${drug}.`;
+          },
+          limits(b, conc, pMax, maxRate) {
+            return `For weight <b>${b} kg</b> and concentration <b>${conc}</b>, max dose is <b>${pMax} mcg/kg/min</b> → max infusion <b>${maxRate} mL/hr</b>.`;
+          },
+          noMax(drug) {
+            return `No specified maximum dose in table for ${drug}.`;
+          },
+          modeForward: "mcg/kg/min → mL/hr (Tap to change mode)",
+          modeReverse: "mL/hr → mcg/kg/min (Tap to change mode)",
+        },
+        th: {
+          below: "ต่ำกว่าเกณฑ์",
+          within: "อยู่ในเกณฑ์",
+          above: "สูงกว่าเกณฑ์",
+          range(min, max, drug) {
+            return ` • ขนาดที่กำหนด: <b>${min}</b> ถึง <b>${max} mcg/kg/min</b> สำหรับ <b>${drug}</b>.`;
+          },
+          limits(b, conc, pMax, maxRate) {
+            return `สำหรับน้ำหนัก <b>${b} kg</b> และความเข้มข้น <b>${conc}</b>, Dose สูงสุดคือ <b>${pMax} mcg/kg/min</b> → Infusion rate สูงสุด <b>${maxRate} mL/hr</b>.`;
+          },
+          noMax(drug) {
+            return `ไม่มีการระบุขนาดยาสูงสุดในตารางสำหรับ ${drug}.`;
+          },
+          modeForward: "mcg/kg/min → mL/hr (กดเพื่อเปลี่ยนโหมด)",
+          modeReverse: "mL/hr → mcg/kg/min (กดเพื่อเปลี่ยนโหมด)",
+        },
+      };
+      function dict() {
+        return LANG === "th" ? I18N.th : I18N.en;
+      }
+      function normalizeLang(s) {
+        const v = (s || "").toLowerCase();
+        if (["th", "thai", "th-th"].includes(v)) return "th";
+        return "en";
+      }
 
-    <!-- Hidden Q fields -->
-    <div style="display:none" aria-hidden="true">
-      <input id="Qf" type="text" readonly />
-      <input id="Qr" type="text" readonly />
-    </div>
+      /* ------------------ DOM helpers ------------------ */
+      const $ = (id) => document.getElementById(id);
+      const drugSel = $("drug"),
+        concSel = $("conc"),
+        drugChip = $("drugChip");
+      const modeBtn = $("modeBtn");
+      const forwardDiv = $("forward"),
+        reverseDiv = $("reverse");
+      const P = $("P"),
+        B = $("B"),
+        Qf = $("Qf"),
+        Rate = $("Rate");
+      const RateIn = $("RateIn"),
+        B2 = $("B2"),
+        Qr = $("Qr"),
+        Pout = $("Pout");
+      const resTitle = $("resTitle"),
+        resValue = $("resValue"),
+        limits = $("limits"),
+        rangeNote = $("rangeNote");
+      const shareLink = $("shareLink"),
+        copyBtn = $("copyBtn");
 
-    <div class="result" id="summary">
-      <h2 id="resTitle">Result</h2>
-      <div class="value" id="resValue">—</div>
-      <div class="hint" id="limits"></div>
-      <div class="hint" id="rangeNote"></div>
-    </div>
+      let mode = "forward";
+      let booting = true;
 
-    <div class="share">
-      <input class="link" id="shareLink" type="text" readonly>
-      <button id="copyBtn" type="button">Copy link</button>
-    </div>
+      /* ------------------ Utils ------------------ */
+      function to2(x) {
+        return Number.isFinite(+x) ? (+x).toFixed(2) : "";
+      }
+      function to1(x) {
+        return Number.isFinite(+x) ? (+x).toFixed(1) : "";
+      }
+      function to3(x) {
+        return Number.isFinite(+x) ? (+x).toFixed(3) : "";
+      }
+      function parseNum(v) {
+        const n = Number(v);
+        return Number.isFinite(n) ? n : null;
+      }
 
-    <div class="foot">
-      <div class="hint">
-        <strong>Shareable links (query-string)</strong> — examples:<br>
-        Forward: <code>?drug=dopamine&mode=forward&conc=2:1&p=5.00&b=70.0&lang=en</code><br>
-        Reverse: <code>?drug=levophed&mode=reverse&conc=4:250&rate=120.00&b=70.0&lang=th</code><br>
-        Language param: <code>lang=en</code> or <code>lang=th</code>. Aliases: <code>language</code>, <code>locale</code>.<br>
-        Other aliases: <code>med|medicine</code>, <code>wt|weight</code>, <code>mlhr|mlh|r</code>, <code>rev|reverse</code>.
-      </div>
-    </div>
-  </div>
-</div>
+      /* ------------------ Core math ------------------ */
+      function computeQ(B, A) {
+        return (0.06 * B) / A;
+      } // Q = (0.06×B)/A
+      function computeRate(P, Q) {
+        return P * Q;
+      } // mL/hr
+      function computeP(rate, Q) {
+        return rate / Q;
+      } // mcg/kg/min
+      function pWithinRange(p, d) {
+        if (p == null || !isFinite(p)) return null;
+        if (d.pMax == null) return p >= d.pMin ? "ok" : "low";
+        if (p < d.pMin) return "low";
+        if (p > d.pMax) return "high";
+        return "ok";
+      }
 
-<script>
-/* ------------------ Drug configuration (with colors) ------------------ */
-const DRUGS = [
-  { id:"dopamine",   name:"Dopamine",                 pMin:1,    pMax:50, conc:["1:1","2:1"],    color:"#6cc866" },
-  { id:"dobutamine", name:"Dobutamine",               pMin:1,    pMax:40, conc:["1:1","2:1"],    color:"#f8d761" },
-  { id:"adrenaline", name:"Adrenaline",               pMin:0.01, pMax:null,conc:["1:10"],        color:"#feb1dc" },
-  { id:"levophed",   name:"Levophed (Norepinephrine)",pMin:0.01, pMax:3,  conc:["4:50","4:100","4:250"], color:"#751be3" },
-  { id:"primacor",   name:"Primacor (Milrinone)",     pMin:0.01, pMax:null,conc:["1:5"],        color:"#d088f7" },
-  { id:"ntg",        name:"NTG (Nitroglycerine)",     pMin:1,    pMax:null,conc:["1:1","2:1"],   color:"#e87c1e" },
-];
-const DRUG_INDEX = Object.fromEntries(DRUGS.map(d=>[d.id,d]));
+      /* ------------------ URL parsing (query preferred) ------------------ */
+      function normalizeSlug(s) {
+        if (!s) return null;
+        s = s.trim().toLowerCase();
+        if (SYNS[s]) s = SYNS[s];
+        return s;
+      }
+      function parseHashParts() {
+        const raw = (location.hash || "").replace(/^#/, "");
+        let path = "",
+          qs = "";
+        if (!raw) return { path: "", qs: "" };
+        if (raw.startsWith("/")) {
+          const ix = raw.indexOf("?");
+          if (ix >= 0) {
+            path = raw.slice(1, ix);
+            qs = raw.slice(ix + 1);
+          } else {
+            path = raw.slice(1);
+          }
+        } else if (raw.startsWith("?")) {
+          qs = raw.slice(1);
+        } else if (raw.includes("=")) {
+          qs = raw;
+        } else {
+          path = raw;
+        }
+        return { path, qs };
+      }
+      function getParamsFromURL() {
+        const url = new URL(location.href);
 
-/* Synonyms for URL parsing */
-const SYNS = {
-  norepinephrine:"levophed", norepi:"levophed", noradrenaline:"levophed",
-  epinephrine:"adrenaline", milrinone:"primacor",
-  nitroglycerin:"ntg", nitroglycerine:"ntg"
-};
+        // Preferred: query
+        let drug = normalizeSlug(
+          url.searchParams.get("drug") ||
+            url.searchParams.get("med") ||
+            url.searchParams.get("medicine")
+        );
+        let modeRaw =
+          url.searchParams.get("mode") ||
+          url.searchParams.get("m") ||
+          url.searchParams.get("reverse") ||
+          url.searchParams.get("rev");
+        let concRaw =
+          url.searchParams.get("conc") ||
+          url.searchParams.get("concentration") ||
+          url.searchParams.get("a");
+        let pRaw = url.searchParams.get("p") || url.searchParams.get("dose");
+        let bRaw =
+          url.searchParams.get("b") ||
+          url.searchParams.get("wt") ||
+          url.searchParams.get("weight");
+        let rateRaw =
+          url.searchParams.get("rate") ||
+          url.searchParams.get("mlhr") ||
+          url.searchParams.get("mlh") ||
+          url.searchParams.get("r");
+        let langRaw =
+          url.searchParams.get("lang") ||
+          url.searchParams.get("language") ||
+          url.searchParams.get("locale");
 
-/* ---------- i18n (English / Thai) ---------- */
-let LANG = "en";
-const I18N = {
-  en: {
-    below: "Below min",
-    within: "Within range",
-    above: "Above max",
-    range(min, max, drug){ return ` • Range: <b>${min}</b> to <b>${max}</b> mcg/kg/min for ${drug}.`; },
-    limits(b, conc, pMax, maxRate){ return `For weight <b>${b} kg</b> and concentration <b>${conc}</b>, max dose is <b>${pMax} mcg/kg/min</b> → max infusion <b>${maxRate} mL/hr</b>.`; },
-    noMax(drug){ return `No specified maximum dose in table for ${drug}.`; },
-    modeForward: "mcg/kg/min → mL/hr (Tap to change mode)",
-    modeReverse: "mL/hr → mcg/kg/min (Tap to change mode)",
-  },
-  th: {
-    below: "ต่ำกว่าเกณฑ์",
-    within: "อยู่ในเกณฑ์",
-    above: "สูงกว่าเกณฑ์",
-    range(min, max, drug){ return ` • ขนาดที่กำหนด: <b>${min}</b> ถึง <b>${max} mcg/kg/min</b> สำหรับ <b>${drug}</b>.`; },
-    limits(b, conc, pMax, maxRate){ return `สำหรับน้ำหนัก <b>${b} kg</b> และความเข้มข้น <b>${conc}</b>, Dose สูงสุดคือ <b>${pMax} mcg/kg/min</b> → Infusion rate สูงสุด <b>${maxRate} mL/hr</b>.`; },
-    noMax(drug){ return `ไม่มีการระบุขนาดยาสูงสุดในตารางสำหรับ ${drug}.`; },
-    modeForward: "mcg/kg/min → mL/hr (กดเพื่อเปลี่ยนโหมด)",
-    modeReverse: "mL/hr → mcg/kg/min (กดเพื่อเปลี่ยนโหมด)",
-  }
-};
-function dict(){ return LANG==="th" ? I18N.th : I18N.en; }
-function normalizeLang(s){
-  const v = (s||"").toLowerCase();
-  if (["th","thai","th-th"].includes(v)) return "th";
-  return "en";
-}
+        // Fallback: hash
+        const { path, qs } = parseHashParts();
+        const hashParams = new URLSearchParams(qs || "");
+        if (!drug)
+          drug =
+            normalizeSlug(path) ||
+            normalizeSlug(
+              hashParams.get("drug") ||
+                hashParams.get("med") ||
+                hashParams.get("medicine")
+            );
+        if (modeRaw == null)
+          modeRaw =
+            hashParams.get("mode") ||
+            hashParams.get("m") ||
+            hashParams.get("reverse") ||
+            hashParams.get("rev");
+        if (concRaw == null)
+          concRaw =
+            hashParams.get("conc") ||
+            hashParams.get("concentration") ||
+            hashParams.get("a");
+        if (pRaw == null) pRaw = hashParams.get("p") || hashParams.get("dose");
+        if (bRaw == null)
+          bRaw =
+            hashParams.get("b") ||
+            hashParams.get("wt") ||
+            hashParams.get("weight");
+        if (rateRaw == null)
+          rateRaw =
+            hashParams.get("rate") ||
+            hashParams.get("mlhr") ||
+            hashParams.get("mlh") ||
+            hashParams.get("r");
+        if (langRaw == null)
+          langRaw =
+            hashParams.get("lang") ||
+            hashParams.get("language") ||
+            hashParams.get("locale");
 
-/* ------------------ DOM helpers ------------------ */
-const $ = id => document.getElementById(id);
-const drugSel = $("drug"), concSel = $("conc"), drugChip = $("drugChip");
-const modeBtn = $("modeBtn");
-const forwardDiv = $("forward"), reverseDiv = $("reverse");
-const P = $("P"), B = $("B"), Qf = $("Qf"), Rate = $("Rate");
-const RateIn = $("RateIn"), B2 = $("B2"), Qr = $("Qr"), Pout = $("Pout");
-const resTitle = $("resTitle"), resValue = $("resValue"), limits = $("limits"), rangeNote = $("rangeNote");
-const shareLink = $("shareLink"), copyBtn = $("copyBtn");
+        // Fallback: path segment
+        if (!drug) {
+          const segs = (url.pathname || "").split("/").filter(Boolean);
+          if (segs.length) {
+            drug = normalizeSlug(segs[segs.length - 1]);
+          }
+        }
 
-let mode = "forward";
-let booting = true;
+        const modeVal = (() => {
+          const s = (modeRaw || "").toString().toLowerCase();
+          if (["reverse", "rev", "r"].includes(s)) return "reverse";
+          if (["1", "true", "yes", "on"].includes(s)) return "reverse";
+          return "forward";
+        })();
 
-/* ------------------ Utils ------------------ */
-function to2(x){ return Number.isFinite(+x) ? (+x).toFixed(2) : ""; }
-function to1(x){ return Number.isFinite(+x) ? (+x).toFixed(1) : ""; }
-function to3(x){ return Number.isFinite(+x) ? (+x).toFixed(3) : ""; }
-function parseNum(v){ const n = Number(v); return Number.isFinite(n) ? n : null; }
+        const conc = concRaw ? concRaw.replace(/\s+/g, "") : null;
+        const p = parseNum(pRaw);
+        const b = parseNum(bRaw);
+        const rate = parseNum(rateRaw);
+        const lang = normalizeLang(langRaw || LANG);
 
-/* ------------------ Core math ------------------ */
-function computeQ(B, A){ return (0.06 * B) / A; } // Q = (0.06×B)/A
-function computeRate(P, Q){ return P * Q; }       // mL/hr
-function computeP(rate, Q){ return rate / Q; }     // mcg/kg/min
-function pWithinRange(p, d){
-  if (p == null || !isFinite(p)) return null;
-  if (d.pMax == null) return (p >= d.pMin) ? "ok" : "low";
-  if (p < d.pMin) return "low";
-  if (p > d.pMax) return "high";
-  return "ok";
-}
+        return { drug, mode: modeVal, conc, p, b, rate, lang };
+      }
 
-/* ------------------ URL parsing (query preferred) ------------------ */
-function normalizeSlug(s){
-  if (!s) return null;
-  s = s.trim().toLowerCase();
-  if (SYNS[s]) s = SYNS[s];
-  return s;
-}
-function parseHashParts(){
-  const raw = (location.hash || "").replace(/^#/, "");
-  let path = "", qs = "";
-  if (!raw) return {path:"", qs:""};
-  if (raw.startsWith("/")){
-    const ix = raw.indexOf("?");
-    if (ix >= 0){ path = raw.slice(1, ix); qs = raw.slice(ix+1); }
-    else { path = raw.slice(1); }
-  } else if (raw.startsWith("?")){
-    qs = raw.slice(1);
-  } else if (raw.includes("=")){
-    qs = raw;
-  } else {
-    path = raw;
-  }
-  return {path, qs};
-}
-function getParamsFromURL(){
-  const url = new URL(location.href);
+      /* ------------------ Build & write query URL ------------------ */
+      function buildShareParams() {
+        const params = new URLSearchParams();
+        params.set("drug", drugSel.value);
+        params.set("mode", mode);
+        params.set("lang", LANG);
+        if (concSel.value) params.set("conc", concSel.value);
 
-  // Preferred: query
-  let drug = normalizeSlug(url.searchParams.get("drug") || url.searchParams.get("med") || url.searchParams.get("medicine"));
-  let modeRaw = url.searchParams.get("mode") || url.searchParams.get("m") || url.searchParams.get("reverse") || url.searchParams.get("rev");
-  let concRaw = url.searchParams.get("conc") || url.searchParams.get("concentration") || url.searchParams.get("a");
-  let pRaw    = url.searchParams.get("p")    || url.searchParams.get("dose");
-  let bRaw    = url.searchParams.get("b")    || url.searchParams.get("wt") || url.searchParams.get("weight");
-  let rateRaw = url.searchParams.get("rate") || url.searchParams.get("mlhr") || url.searchParams.get("mlh") || url.searchParams.get("r");
-  let langRaw = url.searchParams.get("lang") || url.searchParams.get("language") || url.searchParams.get("locale");
+        if (mode === "forward") {
+          if (P.value) params.set("p", to2(P.value));
+          if (B.value) params.set("b", to1(B.value));
+          if (Rate.value) params.set("rate", to2(Rate.value));
+        } else {
+          if (RateIn.value) params.set("rate", to2(RateIn.value));
+          if (B2.value) params.set("b", to1(B2.value));
+          if (Pout.value) params.set("p", to2(Pout.value));
+        }
+        return params;
+      }
+      function buildURLWithParams() {
+        const url = new URL(location.href);
+        url.search = buildShareParams().toString();
+        url.hash = "";
+        return url.toString();
+      }
+      let urlTimer = null;
+      const URL_DEBOUNCE_MS = 250;
+      function writeURLFromState_query() {
+        const newUrl = buildURLWithParams();
+        history.replaceState(null, "", newUrl);
+      }
+      function scheduleURLUpdate() {
+        clearTimeout(urlTimer);
+        urlTimer = setTimeout(writeURLFromState_query, URL_DEBOUNCE_MS);
+      }
+      function updateShareLink() {
+        shareLink.value = buildURLWithParams();
+      }
 
-  // Fallback: hash
-  const {path, qs} = parseHashParts();
-  const hashParams = new URLSearchParams(qs || "");
-  if (!drug) drug = normalizeSlug(path) ||
-    normalizeSlug(hashParams.get("drug") || hashParams.get("med") || hashParams.get("medicine"));
-  if (modeRaw == null) modeRaw = hashParams.get("mode") || hashParams.get("m") || hashParams.get("reverse") || hashParams.get("rev");
-  if (concRaw == null) concRaw = hashParams.get("conc") || hashParams.get("concentration") || hashParams.get("a");
-  if (pRaw    == null) pRaw    = hashParams.get("p")    || hashParams.get("dose");
-  if (bRaw    == null) bRaw    = hashParams.get("b")    || hashParams.get("wt") || hashParams.get("weight");
-  if (rateRaw == null) rateRaw = hashParams.get("rate") || hashParams.get("mlhr") || hashParams.get("mlh") || hashParams.get("r");
-  if (langRaw == null) langRaw = hashParams.get("lang") || hashParams.get("language") || hashParams.get("locale");
+      /* ------------------ UI & state ------------------ */
+      function populateDrugOptions() {
+        for (const d of DRUGS) {
+          const opt = document.createElement("option");
+          opt.value = d.id;
+          opt.textContent = d.name;
+          drugSel.appendChild(opt);
+        }
+      }
+      function populateConcs() {
+        const d = DRUG_INDEX[drugSel.value];
+        concSel.innerHTML = "";
+        d.conc.forEach((c) => {
+          const opt = document.createElement("option");
+          opt.value = c;
+          opt.textContent = c;
+          concSel.appendChild(opt);
+        });
+      }
+      function updateChip() {
+        const d = DRUG_INDEX[drugSel.value];
+        drugChip.style.background = d ? d.color : "#444";
+        drugChip.title = d ? d.name : "";
+      }
+      function parseA() {
+        const [x, y] = concSel.value.split(":").map(Number);
+        return x / y;
+      }
+      function showMode(newMode) {
+        mode = newMode;
+        forwardDiv.style.display = mode === "forward" ? "" : "none";
+        reverseDiv.style.display = mode === "reverse" ? "" : "none";
+        modeBtn.classList.toggle("active", mode === "reverse");
+        const D = dict();
+        modeBtn.textContent =
+          mode === "forward" ? D.modeForward : D.modeReverse;
+      }
+      function setIfProvided(inputEl, val, fmt) {
+        if (val == null || !isFinite(val)) return;
+        inputEl.value = fmt ? fmt(val) : val;
+      }
 
-  // Fallback: path segment
-  if (!drug){
-    const segs = (url.pathname || "").split("/").filter(Boolean);
-    if (segs.length){ drug = normalizeSlug(segs[segs.length-1]); }
-  }
+      /* ------------------ Recalc ------------------ */
+      function recalc() {
+        const d = DRUG_INDEX[drugSel.value];
+        const A = parseA();
+        const D = dict(); // current language map
 
-  const modeVal = (()=>{
-    const s = (modeRaw||"").toString().toLowerCase();
-    if (["reverse","rev","r"].includes(s)) return "reverse";
-    if (["1","true","yes","on"].includes(s)) return "reverse";
-    return "forward";
-  })();
+        if (mode === "forward") {
+          const p = Number(P.value);
+          const b = Number(B.value);
+          const Q = computeQ(b, A);
+          Qf.value = isFinite(Q) ? to3(Q) : "";
+          const rate = computeRate(p, Q);
+          Rate.value = isFinite(rate) ? to2(rate) : "";
 
-  const conc = concRaw ? concRaw.replace(/\s+/g,"") : null;
-  const p    = parseNum(pRaw);
-  const b    = parseNum(bRaw);
-  const rate = parseNum(rateRaw);
-  const lang = normalizeLang(langRaw || LANG);
+          resTitle.textContent = "Infusion rate (mL/hr)";
+          resValue.textContent = isFinite(rate) ? `${to2(rate)} mL/hr` : "—";
 
-  return { drug, mode: modeVal, conc, p, b, rate, lang };
-}
+          if (d.pMax != null && isFinite(Q)) {
+            const maxRate = computeRate(d.pMax, Q);
+            limits.innerHTML = D.limits(
+              isFinite(b) ? to1(b) : "—",
+              concSel.value,
+              d.pMax.toFixed(2),
+              to2(maxRate)
+            );
+          } else {
+            limits.textContent = D.noMax(d.name);
+          }
+          const status = pWithinRange(p, d);
+          rangeNote.innerHTML = rangeLine(d, status);
+        } else {
+          const rateIn = Number(RateIn.value);
+          const b2 = Number(B2.value);
+          const Q = computeQ(b2, A);
+          Qr.value = isFinite(Q) ? to3(Q) : "";
+          const p = computeP(rateIn, Q);
+          Pout.value = isFinite(p) ? to2(p) : "";
 
-/* ------------------ Build & write query URL ------------------ */
-function buildShareParams(){
-  const params = new URLSearchParams();
-  params.set("drug", drugSel.value);
-  params.set("mode", mode);
-  params.set("lang", LANG);
-  if (concSel.value) params.set("conc", concSel.value);
+          resTitle.textContent = "Required Dose (mcg/kg/min)";
+          resValue.textContent = isFinite(p) ? `${to2(p)} mcg/kg/min` : "—";
 
-  if (mode === "forward"){
-    if (P.value) params.set("p", to2(P.value));
-    if (B.value) params.set("b", to1(B.value));
-    if (Rate.value) params.set("rate", to2(Rate.value));
-  } else {
-    if (RateIn.value) params.set("rate", to2(RateIn.value));
-    if (B2.value) params.set("b", to1(B2.value));
-    if (Pout.value) params.set("p", to2(Pout.value));
-  }
-  return params;
-}
-function buildURLWithParams(){
-  const url = new URL(location.href);
-  url.search = buildShareParams().toString();
-  url.hash = "";
-  return url.toString();
-}
-let urlTimer = null;
-const URL_DEBOUNCE_MS = 250;
-function writeURLFromState_query(){
-  const newUrl = buildURLWithParams();
-  history.replaceState(null, "", newUrl);
-}
-function scheduleURLUpdate(){
-  clearTimeout(urlTimer);
-  urlTimer = setTimeout(writeURLFromState_query, URL_DEBOUNCE_MS);
-}
-function updateShareLink(){
-  shareLink.value = buildURLWithParams();
-}
+          if (d.pMax != null && isFinite(Q)) {
+            const maxRate = computeRate(d.pMax, Q);
+            limits.innerHTML = D.limits(
+              isFinite(b2) ? to1(b2) : "—",
+              concSel.value,
+              d.pMax.toFixed(2),
+              to2(maxRate)
+            );
+          } else {
+            limits.textContent = D.noMax(d.name);
+          }
+          const status = pWithinRange(p, d);
+          rangeNote.innerHTML = rangeLine(d, status);
+        }
 
-/* ------------------ UI & state ------------------ */
-function populateDrugOptions(){
-  for (const d of DRUGS) {
-    const opt = document.createElement("option");
-    opt.value = d.id; opt.textContent = d.name;
-    drugSel.appendChild(opt);
-  }
-}
-function populateConcs(){
-  const d = DRUG_INDEX[drugSel.value];
-  concSel.innerHTML = "";
-  d.conc.forEach(c=>{
-    const opt = document.createElement("option");
-    opt.value = c; opt.textContent = c; concSel.appendChild(opt);
-  });
-}
-function updateChip(){
-  const d = DRUG_INDEX[drugSel.value];
-  drugChip.style.background = d ? d.color : "#444";
-  drugChip.title = d ? d.name : "";
-}
-function parseA(){
-  const [x,y] = concSel.value.split(":").map(Number);
-  return x / y;
-}
-function showMode(newMode){
-  mode = newMode;
-  forwardDiv.style.display = (mode === "forward") ? "" : "none";
-  reverseDiv.style.display = (mode === "reverse") ? "" : "none";
-  modeBtn.classList.toggle("active", mode==="reverse");
-  const D = dict();
-  modeBtn.textContent = (mode === "forward") ? D.modeForward : D.modeReverse;
-}
-function setIfProvided(inputEl, val, fmt){
-  if (val==null || !isFinite(val)) return;
-  inputEl.value = fmt ? fmt(val) : val;
-}
+        if (!booting) {
+          updateShareLink();
+          scheduleURLUpdate();
+        }
+      }
+      function rangeLine(d, status) {
+        const D = dict();
+        const minTxt = d.pMin != null ? d.pMin.toFixed(2) : "—";
+        const maxTxt = d.pMax != null ? d.pMax.toFixed(2) : "no max";
+        const cls =
+          status === "high" ? "bad" : status === "low" ? "warn" : "ok";
+        const label =
+          status === "high" ? D.above : status === "low" ? D.below : D.within;
+        return `<span class="${cls}">${label}</span>${D.range(
+          minTxt,
+          maxTxt,
+          d.name
+        )}`;
+      }
 
-/* ------------------ Recalc ------------------ */
-function recalc(){
-  const d = DRUG_INDEX[drugSel.value];
-  const A = parseA();
-  const D = dict(); // current language map
+      /* ------------------ Events ------------------ */
+      function attachEvents() {
+        [drugSel, concSel, P, B, RateIn, B2].forEach((el) =>
+          el.addEventListener("input", recalc)
+        );
 
-  if (mode === "forward"){
-    const p = Number(P.value);
-    const b = Number(B.value);
-    const Q = computeQ(b, A);
-    Qf.value = isFinite(Q) ? to3(Q) : "";
-    const rate = computeRate(p, Q);
-    Rate.value = (isFinite(rate)) ? to2(rate) : "";
+        modeBtn.addEventListener("click", () => {
+          showMode(mode === "forward" ? "reverse" : "forward");
+          recalc();
+        });
 
-    resTitle.textContent = "Infusion rate (mL/hr)";
-    resValue.textContent = (isFinite(rate)) ? `${to2(rate)} mL/hr` : "—";
+        drugSel.addEventListener("change", () => {
+          populateConcs();
+          updateChip();
+          recalc();
+        });
 
-    if (d.pMax != null && isFinite(Q)) {
-      const maxRate = computeRate(d.pMax, Q);
-      limits.innerHTML = D.limits(isFinite(b)?to1(b):"—", concSel.value, d.pMax.toFixed(2), to2(maxRate));
-    } else {
-      limits.textContent = D.noMax(d.name);
-    }
-    const status = pWithinRange(p, d);
-    rangeNote.innerHTML = rangeLine(d, status);
+        copyBtn.addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText(shareLink.value);
+            copyBtn.textContent = "Copied!";
+            setTimeout(() => (copyBtn.textContent = "Copy link"), 1200);
+          } catch {
+            shareLink.select();
+            document.execCommand && document.execCommand("copy");
+          }
+        });
 
-  } else {
-    const rateIn = Number(RateIn.value);
-    const b2 = Number(B2.value);
-    const Q = computeQ(b2, A);
-    Qr.value = isFinite(Q) ? to3(Q) : "";
-    const p = computeP(rateIn, Q);
-    Pout.value = (isFinite(p)) ? to2(p) : "";
+        window.addEventListener("popstate", () => {
+          booting = true;
+          hydrateFromURL();
+          booting = false;
+          recalc();
+        });
 
-    resTitle.textContent = "Required Dose (mcg/kg/min)";
-    resValue.textContent = (isFinite(p)) ? `${to2(p)} mcg/kg/min` : "—";
+        window.addEventListener("hashchange", () => {
+          booting = true;
+          hydrateFromURL();
+          booting = false;
+          recalc();
+        });
+      }
 
-    if (d.pMax != null && isFinite(Q)) {
-      const maxRate = computeRate(d.pMax, Q);
-      limits.innerHTML = D.limits(isFinite(b2)?to1(b2):"—", concSel.value, d.pMax.toFixed(2), to2(maxRate));
-    } else {
-      limits.textContent = D.noMax(d.name);
-    }
-    const status = pWithinRange(p, d);
-    rangeNote.innerHTML = rangeLine(d, status);
-  }
+      /* ------------------ Hydration from URL ------------------ */
+      function hydrateFromURL() {
+        const { drug, mode: m, conc, p, b, rate, lang } = getParamsFromURL();
 
-  if (!booting){
-    updateShareLink();
-    scheduleURLUpdate();
-  }
-}
-function rangeLine(d, status){
-  const D = dict();
-  const minTxt = d.pMin != null ? d.pMin.toFixed(2) : "—";
-  const maxTxt = d.pMax != null ? d.pMax.toFixed(2) : "no max";
-  const cls = status === "high" ? "bad" : status === "low" ? "warn" : "ok";
-  const label = status==="high" ? D.above : status==="low" ? D.below : D.within;
-  return `<span class="${cls}">${label}</span>${D.range(minTxt, maxTxt, d.name)}`;
-}
+        // Language
+        LANG = normalizeLang(lang);
 
-/* ------------------ Events ------------------ */
-function attachEvents(){
-  [drugSel, concSel, P, B, RateIn, B2].forEach(el => el.addEventListener("input", recalc));
+        // Drug
+        const dId = drug && DRUG_INDEX[drug] ? drug : DRUGS[0].id;
+        drugSel.value = dId;
+        populateConcs();
+        updateChip();
 
-  modeBtn.addEventListener("click", () => {
-    showMode(mode === "forward" ? "reverse" : "forward");
-    recalc();
-  });
+        // Mode
+        showMode(m);
 
-  drugSel.addEventListener("change", () => {
-    populateConcs();
-    updateChip();
-    recalc();
-  });
+        // Concentration (A)
+        if (conc && Array.from(concSel.options).some((o) => o.value === conc)) {
+          concSel.value = conc;
+        }
 
-  copyBtn.addEventListener("click", async () => {
-    try {
-      await navigator.clipboard.writeText(shareLink.value);
-      copyBtn.textContent = "Copied!";
-      setTimeout(()=>copyBtn.textContent="Copy link", 1200);
-    } catch {
-      shareLink.select();
-      document.execCommand && document.execCommand("copy");
-    }
-  });
+        // Values
+        if (mode === "forward") {
+          setIfProvided(P, p, to2);
+          setIfProvided(B, b, to1);
+          if (rate != null && isFinite(rate)) Rate.value = to2(rate);
+        } else {
+          setIfProvided(RateIn, rate, to2);
+          setIfProvided(B2, b, to1);
+          if (p != null && isFinite(p)) Pout.value = to2(p);
+        }
+      }
 
-  window.addEventListener("popstate", () => {
-    booting = true;
-    hydrateFromURL();
-    booting = false;
-    recalc();
-  });
-
-  window.addEventListener("hashchange", () => {
-    booting = true;
-    hydrateFromURL();
-    booting = false;
-    recalc();
-  });
-}
-
-/* ------------------ Hydration from URL ------------------ */
-function hydrateFromURL(){
-  const { drug, mode: m, conc, p, b, rate, lang } = getParamsFromURL();
-
-  // Language
-  LANG = normalizeLang(lang);
-
-  // Drug
-  const dId = (drug && DRUG_INDEX[drug]) ? drug : DRUGS[0].id;
-  drugSel.value = dId;
-  populateConcs();
-  updateChip();
-
-  // Mode
-  showMode(m);
-
-  // Concentration (A)
-  if (conc && Array.from(concSel.options).some(o=>o.value===conc)) {
-    concSel.value = conc;
-  }
-
-  // Values
-  if (mode === "forward"){
-    setIfProvided(P, p, to2);
-    setIfProvided(B, b, to1);
-    if (rate!=null && isFinite(rate)) Rate.value = to2(rate);
-  } else {
-    setIfProvided(RateIn, rate, to2);
-    setIfProvided(B2, b, to1);
-    if (p!=null && isFinite(p)) Pout.value = to2(p);
-  }
-}
-
-/* ------------------ Init ------------------ */
-function init(){
-  populateDrugOptions();
-  attachEvents();
-  hydrateFromURL();
-  booting = false;
-  recalc();
-  updateShareLink();
-}
-init();
-</script>
-</body>
+      /* ------------------ Init ------------------ */
+      function init() {
+        populateDrugOptions();
+        attachEvents();
+        hydrateFromURL();
+        booting = false;
+        recalc();
+        updateShareLink();
+      }
+      init();
+    </script>
+  </body>
 </html>
