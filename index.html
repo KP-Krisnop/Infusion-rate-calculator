@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -16,6 +16,7 @@
       rel="stylesheet"
     />
     <style>
+      /* ----------------- THEME TOKENS ----------------- */
       :root {
         --bg: #0b1220;
         --card: #121a2b;
@@ -24,7 +25,32 @@
         --good: #37d67a;
         --warn: #ffb020;
         --bad: #ff5e73;
+        --input-bg: #0b1324;
+        --text: #e9f1ff;
+        --border: rgba(255, 255, 255, 0.1);
+        --soft-border: rgba(255, 255, 255, 0.06);
+        --shadow: rgba(0, 0, 0, 0.35);
+        --result-bg: #0f1b31;
+        --result-bd: rgba(83, 176, 255, 0.25);
       }
+      /* Light theme overrides */
+      [data-theme="light"] {
+        --bg: #f6f8fb;
+        --card: #ffffff;
+        --muted: #5f6b7a;
+        --accent: #1f87ff;
+        --good: #1ba84a;
+        --warn: #b87400;
+        --bad: #d93b57;
+        --input-bg: #f3f6fb;
+        --text: #0e1726;
+        --border: rgba(0, 0, 0, 0.12);
+        --soft-border: rgba(0, 0, 0, 0.08);
+        --shadow: rgba(0, 0, 0, 0.12);
+        --result-bg: #f2f7ff;
+        --result-bd: rgba(31, 135, 255, 0.25);
+      }
+
       * {
         box-sizing: border-box;
       }
@@ -32,7 +58,12 @@
         margin: 0;
         font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter,
           Helvetica, Arial, sans-serif;
-        background: linear-gradient(135deg, #0a1020, #0d1630);
+        background: linear-gradient(
+          135deg,
+          var(--bg),
+          color-mix(in oklab, var(--bg), black 6%)
+        );
+        color: var(--text);
       }
       [lang="th"] {
         font-family: "Prompt", system-ui, -apple-system, "Segoe UI", Roboto,
@@ -42,7 +73,7 @@
         max-width: 920px;
         margin: auto;
         padding: clamp(16px, 3vw, 32px);
-        color: #e9f1ff;
+        color: var(--text);
       }
       h1 {
         font-size: clamp(20px, 3.8vw, 30px);
@@ -54,10 +85,10 @@
       }
       .card {
         background: var(--card);
-        border: 1px solid rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--soft-border);
         border-radius: 16px;
         padding: clamp(14px, 2.4vw, 22px);
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+        box-shadow: 0 10px 40px var(--shadow);
         min-width: 300px;
       }
       .grid {
@@ -83,38 +114,40 @@
         width: 100%;
         padding: 12px 12px;
         border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        background: #0b1324;
-        color: #eef3ff;
+        border: 1px solid var(--border);
+        background: var(--input-bg);
+        color: var(--text);
         font-size: 16px;
         outline: none;
       }
       input::placeholder {
-        color: #6e84a8;
+        color: color-mix(in oklab, var(--muted), var(--text) 35%);
       }
       .controls {
         display: flex;
         gap: 10px;
         flex-wrap: wrap;
+        align-items: center;
       }
       .toggle {
         appearance: none;
         width: 100%;
         cursor: pointer;
         background: var(--card);
-        border: 1px solid rgba(255, 255, 255, 0.15);
+        border: 1px solid color-mix(in oklab, var(--border), var(--text) 10%);
       }
       .toggle.active {
-        background: #10233b;
+        background: color-mix(in oklab, var(--card), var(--accent) 12%);
         border-color: var(--accent);
-        box-shadow: 0 0 0 2px rgba(83, 176, 255, 0.2) inset;
+        box-shadow: 0 0 0 2px
+          color-mix(in oklab, var(--accent), transparent 80%) inset;
       }
       .result {
         margin-top: 14px;
         padding: 14px;
         border-radius: 12px;
-        background: #0f1b31;
-        border: 1px solid rgba(83, 176, 255, 0.25);
+        background: var(--result-bg);
+        border: 1px solid var(--result-bd);
       }
       .result h2 {
         margin: 0 0 4px;
@@ -130,6 +163,7 @@
         font-size: 13px;
         margin-top: 8px;
         line-height: 1.5;
+        min-width: 10px;
       }
       .ok {
         color: var(--good);
@@ -141,10 +175,10 @@
         color: var(--bad);
       }
       code {
-        background: #0b1324;
+        background: var(--input-bg);
         padding: 2px 6px;
         border-radius: 6px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        border: 1px solid var(--soft-border);
         overflow-wrap: break-word;
       }
 
@@ -158,15 +192,15 @@
         width: 50px;
         height: 44px;
         border-radius: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.35);
-        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+        border: 1px solid color-mix(in oklab, var(--text), transparent 65%);
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
       }
 
       /* Share row: responsive reflow */
       .share {
         display: grid;
         gap: 8px;
-        grid-template-columns: 1fr; /* mobile: link on its own row */
+        grid-template-columns: 1fr;
         align-items: stretch;
         margin-top: 10px;
       }
@@ -175,27 +209,34 @@
       }
       .btn-row {
         display: grid;
-        grid-template-columns: 1fr 1fr; /* two buttons side-by-side under the input on small screens */
+        grid-template-columns: 1fr 1fr;
         gap: 8px;
       }
       .share button {
         width: 100%;
-      } /* full-width buttons on small screens */
-
+      }
       @media (min-width: 540px) {
         .share {
-          grid-template-columns: 1fr auto auto; /* link + 2 buttons in one row */
+          grid-template-columns: 1fr auto auto;
           align-items: center;
         }
         .share input {
-          grid-column: auto; /* ⬅️ reset so it only uses the first column */
-        }
+          grid-column: auto;
+        } /* fix: don't span all columns on wide screens */
         .btn-row {
-          display: contents; /* flatten the two buttons into the grid */
+          display: contents;
         }
         .share button {
           width: 128px;
         }
+      }
+
+      /* Tiny inline select for theme */
+      .theme-select {
+        width: auto;
+        min-width: 160px;
+        margin-left: auto;
+        background: var(--card);
       }
     </style>
   </head>
@@ -240,6 +281,12 @@
           <button id="modeBtn" class="toggle">
             mcg/kg/min → mL/hr (Tap to change mode)
           </button>
+          <!-- Theme selector -->
+          <select id="themeSel" class="theme-select" aria-label="Theme">
+            <option value="auto">Theme: Auto</option>
+            <option value="light">Theme: Light</option>
+            <option value="dark">Theme: Dark</option>
+          </select>
         </div>
 
         <!-- Forward (Dose → Rate) -->
@@ -288,7 +335,7 @@
           <input id="Qr" type="text" readonly />
         </div>
 
-        <div class="result" id="summary">
+        <div class="result" id="summary" aria-live="polite">
           <h2 id="resTitle">Result</h2>
           <div class="value" id="resValue">—</div>
           <div class="hint" id="limits"></div>
@@ -448,6 +495,7 @@
         concSel = $("conc"),
         drugChip = $("drugChip");
       const modeBtn = $("modeBtn");
+      const themeSel = $("themeSel");
       const forwardDiv = $("forward"),
         reverseDiv = $("reverse");
       const P = $("P"),
@@ -613,6 +661,53 @@
         return { drug, mode: modeVal, conc, p, b, rate, lang };
       }
 
+      /* ------------------ Persist: theme + last state ------------------ */
+      const THEME_KEY = "infuse:theme"; // 'auto' | 'light' | 'dark'
+      const STATE_KEY = "infuse:state"; // JSON blob
+
+      // Theme handling
+      let themeSetting = "auto"; // user's selection
+      const mediaDark = window.matchMedia("(prefers-color-scheme: dark)");
+      function applyTheme(setting) {
+        themeSetting = setting;
+        localStorage.setItem(THEME_KEY, setting);
+        themeSel.value = setting;
+
+        let effective = setting;
+        if (setting === "auto")
+          effective = mediaDark.matches ? "dark" : "light";
+        document.documentElement.setAttribute("data-theme", effective);
+      }
+      mediaDark.addEventListener?.("change", () => {
+        if (themeSetting === "auto") applyTheme("auto"); // re-eval on OS change
+      });
+
+      // State save/load
+      function loadSavedState() {
+        try {
+          const raw = localStorage.getItem(STATE_KEY);
+          if (!raw) return null;
+          return JSON.parse(raw);
+        } catch {
+          return null;
+        }
+      }
+      function saveState() {
+        const state = {
+          drug: drugSel.value,
+          conc: concSel.value,
+          b: B.value ? to1(B.value) : "",
+          mode,
+          lang: LANG,
+          // capture the active input depending on mode
+          p: mode === "forward" && P.value ? to2(P.value) : "",
+          rate: mode === "reverse" && RateIn.value ? to2(RateIn.value) : "",
+        };
+        try {
+          localStorage.setItem(STATE_KEY, JSON.stringify(state));
+        } catch {}
+      }
+
       /* ------------------ Build & write query URL ------------------ */
       function buildShareParams() {
         const params = new URLSearchParams();
@@ -690,7 +785,7 @@
           mode === "forward" ? D.modeForward : D.modeReverse;
       }
       function setIfProvided(inputEl, val, fmt) {
-        if (val == null || !isFinite(val)) return;
+        if (val == null || val === "" || !isFinite(val)) return;
         inputEl.value = fmt ? fmt(val) : val;
       }
 
@@ -713,7 +808,7 @@
         }
       }
 
-      /* ------------------ Recalc ------------------ */
+      /* ------------------ Recalc (+ persist + link) ------------------ */
       function recalc() {
         const d = DRUG_INDEX[drugSel.value];
         const A = parseA();
@@ -767,6 +862,7 @@
         if (!booting) {
           updateShareLink();
           scheduleURLUpdate();
+          saveState(); // persist after every meaningful update
         }
       }
       function rangeLine(d, status) {
@@ -840,6 +936,8 @@
           recalc();
         });
 
+        themeSel.addEventListener("change", () => applyTheme(themeSel.value));
+
         drugSel.addEventListener("change", () => {
           populateConcs();
           updateChip();
@@ -874,43 +972,56 @@
         });
       }
 
-      /* ------------------ Hydration from URL ------------------ */
+      /* ------------------ Hydration from URL + Saved State ------------------ */
       function hydrateFromURL() {
-        const { drug, mode: m, conc, p, b, rate, lang } = getParamsFromURL();
+        const saved = loadSavedState() || {};
+        const { drug, mode: mUrl, conc, p, b, rate, lang } = getParamsFromURL();
 
-        // Language (also set <html lang> for Thai font)
-        LANG = normalizeLang(lang);
+        // Language (and font switch)
+        LANG = normalizeLang(lang || saved.lang || LANG);
         document.documentElement.setAttribute("lang", LANG);
 
         // Drug
-        const dId = drug && DRUG_INDEX[drug] ? drug : DRUGS[0].id;
-        drugSel.value = dId;
+        const resolvedDrug =
+          drug && DRUG_INDEX[drug]
+            ? drug
+            : saved.drug && DRUG_INDEX[saved.drug]
+            ? saved.drug
+            : DRUGS[0].id;
+        drugSel.value = resolvedDrug;
         populateConcs();
         updateChip();
 
         // Mode
-        showMode(m);
+        const resolvedMode = mUrl || saved.mode || "forward";
+        showMode(resolvedMode);
 
-        // Apply defaults (only if missing); then override with URL if present/valid
-        applyDrugDefaults(false);
+        // Concentration: URL > saved > per-drug default
+        const d = DRUG_INDEX[resolvedDrug];
+        const allowed = new Set(d.conc);
+        if (conc && allowed.has(conc)) concSel.value = conc;
+        else if (saved.conc && allowed.has(saved.conc))
+          concSel.value = saved.conc;
+        else applyDrugDefaults(true); // will set default conc + default dose if needed
 
-        if (conc && Array.from(concSel.options).some((o) => o.value === conc)) {
-          concSel.value = conc;
-        }
-
-        // Values
-        setIfProvided(B, b, to1); // single weight field used in both modes
+        // Values (Weight + active input)
+        setIfProvided(B, b ?? saved.b, to1);
         if (mode === "forward") {
-          setIfProvided(P, p, to2);
+          // Dose input: URL > saved > default already applied
+          setIfProvided(P, p ?? saved.p, to2);
           if (rate != null && isFinite(rate)) Rate.value = to2(rate);
         } else {
-          setIfProvided(RateIn, rate, to2);
+          // Reverse: Infusion rate input
+          setIfProvided(RateIn, rate ?? saved.rate, to2);
           if (p != null && isFinite(p)) Pout.value = to2(p);
         }
       }
 
       /* ------------------ Init ------------------ */
       function init() {
+        // Theme: load user setting or 'auto'
+        applyTheme(localStorage.getItem(THEME_KEY) || "auto");
+
         populateDrugOptions();
         attachEvents();
         hydrateFromURL();
