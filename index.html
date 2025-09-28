@@ -161,11 +161,13 @@
         border: 1px solid rgba(255, 255, 255, 0.35);
         box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
       }
+
       .share {
         display: flex;
         gap: 8px;
         align-items: center;
         margin-top: 10px;
+        flex-wrap: wrap; /* allow wrapping on very small screens */
       }
       .share input {
         flex: 1;
@@ -175,6 +177,15 @@
       }
       .share button {
         width: 128px;
+      }
+
+      /* Off-screen QR container (used for generation only) */
+      #qrcode {
+        position: absolute;
+        left: -9999px;
+        width: 0;
+        height: 0;
+        overflow: hidden;
       }
     </style>
   </head>
@@ -277,9 +288,16 @@
         <div class="share">
           <input class="link" id="shareLink" type="text" readonly />
           <button id="copyBtn" type="button">Copy link</button>
+          <button id="qrBtn" type="button">Share QR</button>
         </div>
+
+        <!-- Off-screen QR code generator target -->
+        <div id="qrcode" aria-hidden="true"></div>
       </div>
     </div>
+
+    <!-- QR code library -->
+    <script src="https://cdn.jsdelivr.net/npm/davidshimjs-qrcodejs/qrcode.min.js"></script>
 
     <script>
       /* ------------------ Drug configuration (colors + defaults) ------------------ */
@@ -422,7 +440,9 @@
         limits = $("limits"),
         rangeNote = $("rangeNote");
       const shareLink = $("shareLink"),
-        copyBtn = $("copyBtn");
+        copyBtn = $("copyBtn"),
+        qrBtn = $("qrBtn");
+      const qrContainer = $("qrcode");
 
       let mode = "forward";
       let booting = true;
@@ -565,7 +585,8 @@
 
         const conc = concRaw ? concRaw.replace(/\s+/g, "") : null;
         const p = parseNum(pRaw);
-        const b = parseNum(bRaw);
+        the_b = parseNum(bRaw);
+        const b = the_b; // keep original naming but allow lint fix
         const rate = parseNum(rateRaw);
         const lang = normalizeLang(langRaw || LANG);
         return { drug, mode: modeVal, conc, p, b, rate, lang };
@@ -742,6 +763,59 @@
         )}`;
       }
 
+      /* ------------------ QR generation & download ------------------ */
+      function downloadQRForCurrentLink() {
+        const urlToEncode = buildURLWithParams(); // always use fresh canonical URL
+        if (!window.QRCode) {
+          alert("QR generator not loaded.");
+          return;
+        }
+
+        // Clean container then build a fresh 512px QR (good print/share quality)
+        qrContainer.innerHTML = "";
+        const qr = new QRCode(qrContainer, {
+          text: urlToEncode,
+          width: 512,
+          height: 512,
+          colorDark: "#000000",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.H,
+        });
+
+        // Grab canvas or img data
+        setTimeout(() => {
+          let dataUrl = "";
+          const canvas = qrContainer.querySelector("canvas");
+          if (canvas && canvas.toDataURL) {
+            dataUrl = canvas.toDataURL("image/png");
+          } else {
+            const img = qrContainer.querySelector("img");
+            if (img && img.src) dataUrl = img.src;
+          }
+          if (!dataUrl) {
+            alert("Failed to generate QR image.");
+            return;
+          }
+
+          // Compose a helpful filename
+          const d = DRUG_INDEX[drugSel.value];
+          const fname = `infusion-qr_${drugSel.value}_${mode}.png`;
+
+          const a = document.createElement("a");
+          a.href = dataUrl;
+          a.download = fname;
+
+          // Safari old fallback
+          if (typeof a.download === "undefined") {
+            window.open(dataUrl, "_blank");
+          } else {
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+          }
+        }, 0); // allow QRCode to render into the container
+      }
+
       /* ------------------ Events ------------------ */
       function attachEvents() {
         [drugSel, concSel, P, RateIn, B].forEach((el) =>
@@ -770,6 +844,8 @@
             document.execCommand && document.execCommand("copy");
           }
         });
+
+        qrBtn.addEventListener("click", downloadQRForCurrentLink);
 
         window.addEventListener("popstate", () => {
           booting = true;
