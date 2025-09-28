@@ -162,30 +162,40 @@
         box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
       }
 
+      /* Share row: responsive reflow */
       .share {
-        display: flex;
+        display: grid;
         gap: 8px;
-        align-items: center;
+        grid-template-columns: 1fr; /* mobile: link on its own row */
+        align-items: stretch;
         margin-top: 10px;
-        flex-wrap: wrap; /* allow wrapping on very small screens */
       }
       .share input {
-        flex: 1;
+        grid-column: 1 / -1;
       }
-      .share input[type="text"] {
-        color: var(--muted);
+      .btn-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr; /* two buttons side-by-side under the input on small screens */
+        gap: 8px;
       }
       .share button {
-        width: 128px;
-      }
+        width: 100%;
+      } /* full-width buttons on small screens */
 
-      /* Off-screen QR container (used for generation only) */
-      #qrcode {
-        position: absolute;
-        left: -9999px;
-        width: 0;
-        height: 0;
-        overflow: hidden;
+      @media (min-width: 540px) {
+        .share {
+          grid-template-columns: 1fr auto auto; /* link + 2 buttons in one row */
+          align-items: center;
+        }
+        .share input {
+          grid-column: auto; /* ⬅️ reset so it only uses the first column */
+        }
+        .btn-row {
+          display: contents; /* flatten the two buttons into the grid */
+        }
+        .share button {
+          width: 128px;
+        }
       }
     </style>
   </head>
@@ -272,7 +282,7 @@
           </div>
         </div>
 
-        <!-- Hidden Q fields (kept for logic, not shown) -->
+        <!-- Hidden Q fields -->
         <div style="display: none" aria-hidden="true">
           <input id="Qf" type="text" readonly />
           <input id="Qr" type="text" readonly />
@@ -285,14 +295,27 @@
           <div class="hint" id="rangeNote"></div>
         </div>
 
+        <!-- Share row -->
         <div class="share">
           <input class="link" id="shareLink" type="text" readonly />
-          <button id="copyBtn" type="button">Copy link</button>
-          <button id="qrBtn" type="button">Share QR</button>
+          <div class="btn-row">
+            <button id="copyBtn" type="button">Copy link</button>
+            <button id="qrBtn" type="button">Share QR</button>
+          </div>
         </div>
 
         <!-- Off-screen QR code generator target -->
-        <div id="qrcode" aria-hidden="true"></div>
+        <div
+          id="qrcode"
+          aria-hidden="true"
+          style="
+            position: absolute;
+            left: -9999px;
+            width: 0;
+            height: 0;
+            overflow: hidden;
+          "
+        ></div>
       </div>
     </div>
 
@@ -374,7 +397,6 @@
         milrinone: "primacor",
         nitroglycerin: "ntg",
         nitroglycerine: "ntg",
-        // short aliases
         dopa: "dopamine",
         dobu: "dobutamine",
         adr: "adrenaline",
@@ -585,8 +607,7 @@
 
         const conc = concRaw ? concRaw.replace(/\s+/g, "") : null;
         const p = parseNum(pRaw);
-        the_b = parseNum(bRaw);
-        const b = the_b; // keep original naming but allow lint fix
+        const b = parseNum(bRaw);
         const rate = parseNum(rateRaw);
         const lang = normalizeLang(langRaw || LANG);
         return { drug, mode: modeVal, conc, p, b, rate, lang };
@@ -765,13 +786,12 @@
 
       /* ------------------ QR generation & download ------------------ */
       function downloadQRForCurrentLink() {
-        const urlToEncode = buildURLWithParams(); // always use fresh canonical URL
+        const urlToEncode = buildURLWithParams();
         if (!window.QRCode) {
           alert("QR generator not loaded.");
           return;
         }
 
-        // Clean container then build a fresh 512px QR (good print/share quality)
         qrContainer.innerHTML = "";
         const qr = new QRCode(qrContainer, {
           text: urlToEncode,
@@ -782,13 +802,12 @@
           correctLevel: QRCode.CorrectLevel.H,
         });
 
-        // Grab canvas or img data
         setTimeout(() => {
           let dataUrl = "";
           const canvas = qrContainer.querySelector("canvas");
-          if (canvas && canvas.toDataURL) {
+          if (canvas && canvas.toDataURL)
             dataUrl = canvas.toDataURL("image/png");
-          } else {
+          else {
             const img = qrContainer.querySelector("img");
             if (img && img.src) dataUrl = img.src;
           }
@@ -797,23 +816,17 @@
             return;
           }
 
-          // Compose a helpful filename
-          const d = DRUG_INDEX[drugSel.value];
           const fname = `infusion-qr_${drugSel.value}_${mode}.png`;
-
           const a = document.createElement("a");
           a.href = dataUrl;
           a.download = fname;
-
-          // Safari old fallback
-          if (typeof a.download === "undefined") {
-            window.open(dataUrl, "_blank");
-          } else {
+          if (typeof a.download === "undefined") window.open(dataUrl, "_blank");
+          else {
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
           }
-        }, 0); // allow QRCode to render into the container
+        }, 0);
       }
 
       /* ------------------ Events ------------------ */
@@ -853,7 +866,6 @@
           booting = false;
           recalc();
         });
-
         window.addEventListener("hashchange", () => {
           booting = true;
           hydrateFromURL();
