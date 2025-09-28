@@ -130,7 +130,6 @@
         font-size: 13px;
         margin-top: 8px;
         line-height: 1.5;
-        min-width: 10px;
       }
       .ok {
         color: var(--good);
@@ -140,11 +139,6 @@
       }
       .bad {
         color: var(--bad);
-      }
-      .foot {
-        margin-top: 18px;
-        display: grid;
-        gap: 10px;
       }
       code {
         background: #0b1324;
@@ -182,74 +176,6 @@
       .share button {
         width: 128px;
       }
-
-      /* ===== Responsive calc grids (final) ===== */
-      .calc-grid {
-        display: grid;
-        gap: 12px;
-        width: 100%;
-      }
-      .calc-grid > * {
-        min-width: 0;
-      }
-
-      /* map areas */
-      .g-dose {
-        grid-area: dose;
-      }
-      .g-weight {
-        grid-area: weight;
-      }
-      .g-rate {
-        grid-area: rate;
-      }
-      .g-ratein {
-        grid-area: ratein;
-      }
-      .g-weight2 {
-        grid-area: weight2;
-      }
-      .g-pout {
-        grid-area: pout;
-      }
-
-      /* Mobile-first: stacked */
-      .calc-grid--forward {
-        grid-template-columns: 1fr;
-        grid-template-areas:
-          "dose"
-          "weight"
-          "rate";
-      }
-      .calc-grid--reverse {
-        grid-template-columns: 1fr;
-        grid-template-areas:
-          "ratein"
-          "weight2"
-          "pout";
-      }
-
-      /* ≥540px: two inputs top, output full width */
-      @media (min-width: 540px) {
-        .calc-grid--forward {
-          grid-template-columns: 1fr 1fr;
-          grid-template-areas:
-            "dose   weight"
-            "rate   rate";
-        }
-        .calc-grid--reverse {
-          grid-template-columns: 1fr 1fr;
-          grid-template-areas:
-            "ratein weight2"
-            "pout   pout";
-        }
-        .calc-grid--forward .g-rate {
-          grid-column: 1 / -1;
-        }
-        .calc-grid--reverse .g-pout {
-          grid-column: 1 / -1;
-        }
-      }
     </style>
   </head>
   <body>
@@ -260,6 +186,7 @@
       </p>
 
       <div class="card">
+        <!-- Medicine + Concentration -->
         <div class="grid">
           <div>
             <label for="drug">Medicine</label>
@@ -274,16 +201,29 @@
           </div>
         </div>
 
+        <!-- Weight (full width under the row above) -->
+        <div style="margin-top: 12px">
+          <label for="B">Weight (kg)</label>
+          <input
+            id="B"
+            type="number"
+            step="0.1"
+            min="0"
+            placeholder="e.g., 70.0"
+            inputmode="decimal"
+            onclick="this.select();"
+          />
+        </div>
+
         <div class="controls" style="margin: 12px 0">
-          <!-- Initial text will be replaced by JS on load -->
           <button id="modeBtn" class="toggle">
             mcg/kg/min → mL/hr (Tap to change mode)
           </button>
         </div>
 
-        <!-- Forward mode -->
-        <div id="forward" class="calc-grid calc-grid--forward">
-          <div class="g-dose">
+        <!-- Forward (Dose → Rate) -->
+        <div id="forward">
+          <div>
             <label for="P">Dose (mcg/kg/min)</label>
             <input
               id="P"
@@ -295,31 +235,15 @@
               onclick="this.select();"
             />
           </div>
-          <div class="g-weight">
-            <label for="B">Weight (kg)</label>
-            <input
-              id="B"
-              type="number"
-              step="0.1"
-              min="0"
-              placeholder="e.g., 70.0"
-              inputmode="decimal"
-              onclick="this.select();"
-            />
-          </div>
-          <div class="g-rate">
+          <div style="margin-top: 12px">
             <label>Infusion rate (mL/hr)</label>
             <input id="Rate" type="text" readonly />
           </div>
         </div>
 
-        <!-- Reverse mode -->
-        <div
-          id="reverse"
-          class="calc-grid calc-grid--reverse"
-          style="display: none"
-        >
-          <div class="g-ratein">
+        <!-- Reverse (Rate → Dose) -->
+        <div id="reverse" style="display: none">
+          <div>
             <label for="RateIn">Infusion rate (mL/hr)</label>
             <input
               id="RateIn"
@@ -331,25 +255,13 @@
               onclick="this.select();"
             />
           </div>
-          <div class="g-weight2">
-            <label for="B2">Weight (kg)</label>
-            <input
-              id="B2"
-              type="number"
-              step="0.1"
-              min="0"
-              placeholder="e.g., 70.0"
-              inputmode="decimal"
-              onclick="this.select();"
-            />
-          </div>
-          <div class="g-pout">
+          <div style="margin-top: 12px">
             <label>Dose (mcg/kg/min)</label>
             <input id="Pout" type="text" readonly />
           </div>
         </div>
 
-        <!-- Hidden Q fields -->
+        <!-- Hidden Q fields (kept for logic, not shown) -->
         <div style="display: none" aria-hidden="true">
           <input id="Qf" type="text" readonly />
           <input id="Qr" type="text" readonly />
@@ -366,29 +278,11 @@
           <input class="link" id="shareLink" type="text" readonly />
           <button id="copyBtn" type="button">Copy link</button>
         </div>
-
-        <div class="foot">
-          <div class="hint">
-            <strong>Shareable links (query-string)</strong> — examples:<br />
-            Forward:
-            <code
-              >?drug=dopamine&mode=forward&conc=2:1&p=5.00&b=70.0&lang=en</code
-            ><br />
-            Reverse:
-            <code
-              >?drug=levophed&mode=reverse&conc=4:250&rate=120.00&b=70.0&lang=th</code
-            ><br />
-            Language param: <code>lang=en</code> or <code>lang=th</code>.
-            Aliases: <code>language</code>, <code>locale</code>.<br />
-            Other aliases: <code>med|medicine</code>, <code>wt|weight</code>,
-            <code>mlhr|mlh|r</code>, <code>rev|reverse</code>.
-          </div>
-        </div>
       </div>
     </div>
 
     <script>
-      /* ------------------ Drug configuration (with colors) ------------------ */
+      /* ------------------ Drug configuration (colors + defaults) ------------------ */
       const DRUGS = [
         {
           id: "dopamine",
@@ -397,6 +291,8 @@
           pMax: 50,
           conc: ["1:1", "2:1"],
           color: "#6cc866",
+          defaultP: 1.0,
+          defaultConc: "1:1",
         },
         {
           id: "dobutamine",
@@ -405,6 +301,8 @@
           pMax: 40,
           conc: ["1:1", "2:1"],
           color: "#f8d761",
+          defaultP: 1.0,
+          defaultConc: "1:1",
         },
         {
           id: "adrenaline",
@@ -413,6 +311,8 @@
           pMax: null,
           conc: ["1:10"],
           color: "#feb1dc",
+          defaultP: 0.1,
+          defaultConc: "1:10",
         },
         {
           id: "levophed",
@@ -421,6 +321,8 @@
           pMax: 3,
           conc: ["8:100", "4:100", "4:250"],
           color: "#751be3",
+          defaultP: 0.1,
+          defaultConc: "4:100",
         },
         {
           id: "primacor",
@@ -429,6 +331,8 @@
           pMax: null,
           conc: ["1:5"],
           color: "#d088f7",
+          defaultP: 0.1,
+          defaultConc: "1:5",
         },
         {
           id: "ntg",
@@ -437,6 +341,8 @@
           pMax: null,
           conc: ["1:1", "2:1"],
           color: "#e87c1e",
+          defaultP: 1.0,
+          defaultConc: "1:1",
         },
       ];
       const DRUG_INDEX = Object.fromEntries(DRUGS.map((d) => [d.id, d]));
@@ -450,6 +356,10 @@
         milrinone: "primacor",
         nitroglycerin: "ntg",
         nitroglycerine: "ntg",
+        // short aliases
+        dopa: "dopamine",
+        dobu: "dobutamine",
+        adr: "adrenaline",
       };
 
       /* ---------- i18n (English / Thai) ---------- */
@@ -488,14 +398,9 @@
           modeReverse: "mL/hr → mcg/kg/min (กดเพื่อเปลี่ยนโหมด)",
         },
       };
-      function dict() {
-        return LANG === "th" ? I18N.th : I18N.en;
-      }
-      function normalizeLang(s) {
-        const v = (s || "").toLowerCase();
-        if (["th", "thai", "th-th"].includes(v)) return "th";
-        return "en";
-      }
+      const dict = () => (LANG === "th" ? I18N.th : I18N.en);
+      const normalizeLang = (s) =>
+        ["th", "thai", "th-th"].includes((s || "").toLowerCase()) ? "th" : "en";
 
       /* ------------------ DOM helpers ------------------ */
       const $ = (id) => document.getElementById(id);
@@ -510,7 +415,6 @@
         Qf = $("Qf"),
         Rate = $("Rate");
       const RateIn = $("RateIn"),
-        B2 = $("B2"),
         Qr = $("Qr"),
         Pout = $("Pout");
       const resTitle = $("resTitle"),
@@ -524,30 +428,18 @@
       let booting = true;
 
       /* ------------------ Utils ------------------ */
-      function to2(x) {
-        return Number.isFinite(+x) ? (+x).toFixed(2) : "";
-      }
-      function to1(x) {
-        return Number.isFinite(+x) ? (+x).toFixed(1) : "";
-      }
-      function to3(x) {
-        return Number.isFinite(+x) ? (+x).toFixed(3) : "";
-      }
-      function parseNum(v) {
+      const to2 = (x) => (Number.isFinite(+x) ? (+x).toFixed(2) : "");
+      const to1 = (x) => (Number.isFinite(+x) ? (+x).toFixed(1) : "");
+      const to3 = (x) => (Number.isFinite(+x) ? (+x).toFixed(3) : "");
+      const parseNum = (v) => {
         const n = Number(v);
         return Number.isFinite(n) ? n : null;
-      }
+      };
 
       /* ------------------ Core math ------------------ */
-      function computeQ(B, A) {
-        return (0.06 * B) / A;
-      } // Q = (0.06×B)/A
-      function computeRate(P, Q) {
-        return P * Q;
-      } // mL/hr
-      function computeP(rate, Q) {
-        return rate / Q;
-      } // mcg/kg/min
+      const computeQ = (B, A) => (0.06 * B) / A; // mL/hr per (mcg/kg/min)
+      const computeRate = (P, Q) => P * Q; // mL/hr
+      const computeP = (rate, Q) => rate / Q; // mcg/kg/min
       function pWithinRange(p, d) {
         if (p == null || !isFinite(p)) return null;
         if (d.pMax == null) return p >= d.pMin ? "ok" : "low";
@@ -556,7 +448,7 @@
         return "ok";
       }
 
-      /* ------------------ URL parsing (query preferred) ------------------ */
+      /* ------------------ URL parsing ------------------ */
       function normalizeSlug(s) {
         if (!s) return null;
         s = s.trim().toLowerCase();
@@ -587,8 +479,6 @@
       }
       function getParamsFromURL() {
         const url = new URL(location.href);
-
-        // Preferred: query
         let drug = normalizeSlug(
           url.searchParams.get("drug") ||
             url.searchParams.get("med") ||
@@ -678,7 +568,6 @@
         const b = parseNum(bRaw);
         const rate = parseNum(rateRaw);
         const lang = normalizeLang(langRaw || LANG);
-
         return { drug, mode: modeVal, conc, p, b, rate, lang };
       }
 
@@ -696,7 +585,7 @@
           if (Rate.value) params.set("rate", to2(Rate.value));
         } else {
           if (RateIn.value) params.set("rate", to2(RateIn.value));
-          if (B2.value) params.set("b", to1(B2.value));
+          if (B.value) params.set("b", to1(B.value));
           if (Pout.value) params.set("p", to2(Pout.value));
         }
         return params;
@@ -763,23 +652,41 @@
         inputEl.value = fmt ? fmt(val) : val;
       }
 
+      /* --------- Apply per-drug defaults (dose + concentration) --------- */
+      function applyDrugDefaults(force = false) {
+        const d = DRUG_INDEX[drugSel.value];
+        if (!d) return;
+
+        // concentration default if invalid/missing or forced
+        const allowed = Array.from(concSel.options).map((o) => o.value);
+        if (force || !concSel.value || !allowed.includes(concSel.value)) {
+          if (d.defaultConc && allowed.includes(d.defaultConc)) {
+            concSel.value = d.defaultConc;
+          }
+        }
+
+        // forward-dose default if empty or forced (harmless in reverse)
+        if (force || !P.value) {
+          if (d.defaultP != null) P.value = to2(d.defaultP);
+        }
+      }
+
       /* ------------------ Recalc ------------------ */
       function recalc() {
         const d = DRUG_INDEX[drugSel.value];
         const A = parseA();
-        const D = dict(); // current language map
+        const D = dict();
+
+        const b = Number(B.value);
+        const Q = computeQ(b, A);
 
         if (mode === "forward") {
           const p = Number(P.value);
-          const b = Number(B.value);
-          const Q = computeQ(b, A);
           Qf.value = isFinite(Q) ? to3(Q) : "";
           const rate = computeRate(p, Q);
           Rate.value = isFinite(rate) ? to2(rate) : "";
-
           resTitle.textContent = "Infusion rate (mL/hr)";
           resValue.textContent = isFinite(rate) ? `${to2(rate)} mL/hr` : "—";
-
           if (d.pMax != null && isFinite(Q)) {
             const maxRate = computeRate(d.pMax, Q);
             limits.innerHTML = D.limits(
@@ -795,19 +702,15 @@
           rangeNote.innerHTML = rangeLine(d, status);
         } else {
           const rateIn = Number(RateIn.value);
-          const b2 = Number(B2.value);
-          const Q = computeQ(b2, A);
           Qr.value = isFinite(Q) ? to3(Q) : "";
           const p = computeP(rateIn, Q);
           Pout.value = isFinite(p) ? to2(p) : "";
-
           resTitle.textContent = "Required Dose (mcg/kg/min)";
           resValue.textContent = isFinite(p) ? `${to2(p)} mcg/kg/min` : "—";
-
           if (d.pMax != null && isFinite(Q)) {
             const maxRate = computeRate(d.pMax, Q);
             limits.innerHTML = D.limits(
-              isFinite(b2) ? to1(b2) : "—",
+              isFinite(b) ? to1(b) : "—",
               concSel.value,
               d.pMax.toFixed(2),
               to2(maxRate)
@@ -841,7 +744,7 @@
 
       /* ------------------ Events ------------------ */
       function attachEvents() {
-        [drugSel, concSel, P, B, RateIn, B2].forEach((el) =>
+        [drugSel, concSel, P, RateIn, B].forEach((el) =>
           el.addEventListener("input", recalc)
         );
 
@@ -853,6 +756,7 @@
         drugSel.addEventListener("change", () => {
           populateConcs();
           updateChip();
+          applyDrugDefaults(true); // switch to this drug’s defaults
           recalc();
         });
 
@@ -886,8 +790,9 @@
       function hydrateFromURL() {
         const { drug, mode: m, conc, p, b, rate, lang } = getParamsFromURL();
 
-        // Language
+        // Language (also set <html lang> for Thai font)
         LANG = normalizeLang(lang);
+        document.documentElement.setAttribute("lang", LANG);
 
         // Drug
         const dId = drug && DRUG_INDEX[drug] ? drug : DRUGS[0].id;
@@ -898,19 +803,20 @@
         // Mode
         showMode(m);
 
-        // Concentration (A)
+        // Apply defaults (only if missing); then override with URL if present/valid
+        applyDrugDefaults(false);
+
         if (conc && Array.from(concSel.options).some((o) => o.value === conc)) {
           concSel.value = conc;
         }
 
         // Values
+        setIfProvided(B, b, to1); // single weight field used in both modes
         if (mode === "forward") {
           setIfProvided(P, p, to2);
-          setIfProvided(B, b, to1);
           if (rate != null && isFinite(rate)) Rate.value = to2(rate);
         } else {
           setIfProvided(RateIn, rate, to2);
-          setIfProvided(B2, b, to1);
           if (p != null && isFinite(p)) Pout.value = to2(p);
         }
       }
