@@ -43,7 +43,41 @@ app.js:446 Uncaught TypeError: Cannot read properties of undefined (reading 'map
     at bootstrapCatalog (app.js:491:13)
     at app.js:493:3
 
+More over the database can be informative on the preparation info. For example...
+[{
+  id: "levophed",
+  name: "Levophed (Norepinephrine)",
+  color: "#751be3",
+  pMin: 0.01, pMax: 3,
+  conc: ["8:100","4:100","4:250"],
+  defaultP: 0.1, defaultConc: "4:100",
+  synonyms: ["norepi","norepinephrine","noradrenaline"],
+  preparations: [
+    { ampule:"4 mg/4 ml (1 mg/ml)", conc:"4:100", total:100, drugMl:4, solventMl:96 },
+    ...
+  ]
+}, ...]
 
+Can be this...
+[{
+  id: "levophed",
+  name: "Levophed (Norepinephrine)",
+  color: "#751be3",
+  pMin: 0.01, pMax: 3,
+  conc: ["8:100","4:100","4:250"],
+  defaultP: 0.1,
+  defaultConc: "4:100",
+  defaultTotal: "100",
+  synonyms: ["norepi","norepinephrine","noradrenaline"],
+  prepVolumes: [100]
+  ampuleName:"4 mg/4 mL", # Exclude the parentheses
+  ampuleSize: 4, # in mL
+  ampuleConc: 1 # in mg/mL
+}, ...]
+
+In fact, the preparation can be calculated with "prepVolumes", selected "conc", selected "ampuleSize" and "ampuleConc",
+
+DO NOT EDIT THE FILES YET. Discuss with me first about how you will do it and I will let you know if it is what I need and what to add more.
 
 /* ------------------ Drug configuration (colors + defaults) ------------------ */
 const DRUGS = [

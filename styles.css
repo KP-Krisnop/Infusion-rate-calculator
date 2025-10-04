@@ -246,7 +246,8 @@ code {
   gap: 8px;
 }
 .btn-group--equal .chipbtn {
-  flex: 1 1 160px; /* equal width columns, wrap as needed */
+  /* equal width columns, wrap as needed */
+  flex: 1 1;
 }
 
 .chipbtn {
@@ -274,6 +275,22 @@ code {
   color: #eaf4ff;
   border-color: var(--accent);
   box-shadow: 0 0 0 2px rgba(83, 176, 255, 0.25) inset;
+}
+
+/* Disabled chip look */
+.chipbtn:disabled,
+.chipbtn[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.3);
+  border-style: dashed; /* optional—nice visual cue */
+}
+
+/* Don’t flash hover style on disabled */
+.chipbtn:disabled:hover,
+.chipbtn[aria-disabled="true"]:hover {
+  border-color: var(--border);
+  box-shadow: none;
 }
 
 .prep-outputs {

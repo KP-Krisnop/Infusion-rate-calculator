@@ -1,283 +1,123 @@
-/* ------------------ Drug configuration (colors + defaults) ------------------ */
+/* ------------------ Unified drug database ------------------ */
 const DRUGS = [
   {
     id: "dopamine",
     name: "Dopamine",
+    color: "#6cc866",
     pMin: 1,
     pMax: 50,
     conc: ["1:1", "2:1"],
-    color: "#6cc866",
     defaultP: 1.0,
     defaultConc: "2:1",
+    defaultTotal: 100,
+    synonyms: ["dopa"],
+    ampules: [{ name: "250 mg/10 mL (25 mg/mL)", sizeMl: 10, concMgPerMl: 25 }],
+    prepVolumesByConc: {
+      "1:1": [100, 250, 500],
+      "2:1": [100, 250, 500],
+    },
   },
   {
     id: "dobutamine",
     name: "Dobutamine",
+    color: "#f8d761",
     pMin: 1,
     pMax: 40,
     conc: ["1:1", "2:1"],
-    color: "#f8d761",
     defaultP: 1.0,
     defaultConc: "1:1",
+    defaultTotal: 100,
+    synonyms: ["dobu"],
+    ampules: [
+      { name: "250 mg/20 mL (12.5 mg/mL)", sizeMl: 20, concMgPerMl: 12.5 },
+    ],
+    prepVolumesByConc: {
+      "1:1": [100, 250, 500],
+      "2:1": [100, 250, 500],
+    },
   },
   {
     id: "adrenaline",
     name: "Adrenaline",
+    color: "#feb1dc",
     pMin: 0.01,
     pMax: null,
     conc: ["1:10"],
-    color: "#feb1dc",
     defaultP: 0.1,
     defaultConc: "1:10",
+    defaultTotal: 100,
+    synonyms: ["epinephrine", "adr"],
+    ampules: [{ name: "1 mg/mL (1:1000) 1 mL", sizeMl: 1, concMgPerMl: 1 }],
+    prepVolumesByConc: {
+      "1:10": [100, 250, 500],
+    },
   },
   {
     id: "levophed",
     name: "Levophed (Norepinephrine)",
+    color: "#751be3",
     pMin: 0.01,
     pMax: 3,
     conc: ["8:100", "4:100", "4:250"],
-    color: "#751be3",
     defaultP: 0.1,
     defaultConc: "4:100",
+    defaultTotal: 100,
+    synonyms: ["norepi", "norepinephrine", "noradrenaline"],
+    ampules: [{ name: "4 mg/4 mL (1 mg/mL)", sizeMl: 4, concMgPerMl: 1 }],
+    prepVolumesByConc: {
+      "4:100": [100],
+      "8:100": [100],
+      "4:250": [250, 500],
+    },
   },
   {
     id: "primacor",
     name: "Primacor (Milrinone)",
+    color: "#d088f7",
     pMin: 0.01,
     pMax: null,
     conc: ["1:5"],
-    color: "#d088f7",
     defaultP: 0.1,
     defaultConc: "1:5",
+    defaultTotal: 100,
+    synonyms: ["milrinone"],
+    ampules: [{ name: "10 mg/10 mL (1 mg/mL)", sizeMl: 10, concMgPerMl: 1 }],
+    prepVolumesByConc: {
+      "1:5": [50, 100],
+    },
   },
   {
     id: "ntg",
     name: "NTG (Nitroglycerine)",
+    color: "#e87c1e",
     pMin: 1,
     pMax: null,
     conc: ["1:1", "2:1"],
-    color: "#e87c1e",
     defaultP: 1.0,
     defaultConc: "1:1",
+    defaultTotal: 100,
+    synonyms: ["nitroglycerin", "nitroglycerine"],
+    ampules: [{ name: "50 mg/10 mL (5 mg/mL)", sizeMl: 10, concMgPerMl: 5 }],
+    prepVolumesByConc: {
+      "1:1": [100, 250, 500],
+      // Intentionally omit "2:1" so all totals show but are disabled for that conc
+    },
   },
 ];
+
 const DRUG_INDEX = Object.fromEntries(DRUGS.map((d) => [d.id, d]));
 
-/* Synonyms for URL parsing */
-const SYNS = {
-  norepinephrine: "levophed",
-  norepi: "levophed",
-  noradrenaline: "levophed",
-  epinephrine: "adrenaline",
-  milrinone: "primacor",
-  nitroglycerin: "ntg",
-  nitroglycerine: "ntg",
-  dopa: "dopamine",
-  dobu: "dobutamine",
-  adr: "adrenaline",
-};
+// Always show these totals in the UI
+const CANON_TOTALS = [50, 100, 250, 500];
 
-/* --- Dilution preset data (by drug + concentration + total) --- */
-const PREP_DATA = [
-  // Adrenaline
-  {
-    drug: "adrenaline",
-    ampule: "1 mg/ml (1:1000)",
-    conc: "1:10",
-    total: 100,
-    drugMl: 10,
-    solventMl: 90,
-  },
-  {
-    drug: "adrenaline",
-    ampule: "1 mg/ml (1:1000)",
-    conc: "1:10",
-    total: 250,
-    drugMl: 25,
-    solventMl: 225,
-  },
-  {
-    drug: "adrenaline",
-    ampule: "1 mg/ml (1:1000)",
-    conc: "1:10",
-    total: 500,
-    drugMl: 50,
-    solventMl: 450,
-  },
-  // Levophed
-  {
-    drug: "levophed",
-    ampule: "4 mg/4 ml (1 mg/ml)",
-    conc: "4:100",
-    total: 100,
-    drugMl: 4,
-    solventMl: 96,
-  },
-  {
-    drug: "levophed",
-    ampule: "4 mg/4 ml (1 mg/ml)",
-    conc: "8:100",
-    total: 100,
-    drugMl: 8,
-    solventMl: 92,
-  },
-  {
-    drug: "levophed",
-    ampule: "4 mg/4 ml (1 mg/ml)",
-    conc: "4:250",
-    total: 250,
-    drugMl: 4,
-    solventMl: 246,
-  },
-  {
-    drug: "levophed",
-    ampule: "4 mg/4 ml (1 mg/ml)",
-    conc: "4:250",
-    total: 500,
-    drugMl: 8,
-    solventMl: 492,
-  },
-  // Dopamine
-  {
-    drug: "dopamine",
-    ampule: "250 mg/10 ml (25 mg/ml)",
-    conc: "1:1",
-    total: 100,
-    drugMl: 4,
-    solventMl: 96,
-  },
-  {
-    drug: "dopamine",
-    ampule: "250 mg/10 ml (25 mg/ml)",
-    conc: "1:1",
-    total: 250,
-    drugMl: 10,
-    solventMl: 240,
-  },
-  {
-    drug: "dopamine",
-    ampule: "250 mg/10 ml (25 mg/ml)",
-    conc: "1:1",
-    total: 500,
-    drugMl: 20,
-    solventMl: 480,
-  },
-  {
-    drug: "dopamine",
-    ampule: "250 mg/10 ml (25 mg/ml)",
-    conc: "2:1",
-    total: 100,
-    drugMl: 8,
-    solventMl: 92,
-  },
-  {
-    drug: "dopamine",
-    ampule: "250 mg/10 ml (25 mg/ml)",
-    conc: "2:1",
-    total: 250,
-    drugMl: 20,
-    solventMl: 230,
-  },
-  {
-    drug: "dopamine",
-    ampule: "250 mg/10 ml (25 mg/ml)",
-    conc: "2:1",
-    total: 500,
-    drugMl: 40,
-    solventMl: 460,
-  },
-  // Dobutamine
-  {
-    drug: "dobutamine",
-    ampule: "250 mg/20 ml (12.5 mg/ml)",
-    conc: "1:1",
-    total: 100,
-    drugMl: 8,
-    solventMl: 92,
-  },
-  {
-    drug: "dobutamine",
-    ampule: "250 mg/20 ml (12.5 mg/ml)",
-    conc: "1:1",
-    total: 250,
-    drugMl: 20,
-    solventMl: 230,
-  },
-  {
-    drug: "dobutamine",
-    ampule: "250 mg/20 ml (12.5 mg/ml)",
-    conc: "1:1",
-    total: 500,
-    drugMl: 40,
-    solventMl: 460,
-  },
-  {
-    drug: "dobutamine",
-    ampule: "250 mg/20 ml (12.5 mg/ml)",
-    conc: "2:1",
-    total: 100,
-    drugMl: 16,
-    solventMl: 84,
-  },
-  {
-    drug: "dobutamine",
-    ampule: "250 mg/20 ml (12.5 mg/ml)",
-    conc: "2:1",
-    total: 250,
-    drugMl: 40,
-    solventMl: 210,
-  },
-  {
-    drug: "dobutamine",
-    ampule: "250 mg/20 ml (12.5 mg/ml)",
-    conc: "2:1",
-    total: 500,
-    drugMl: 80,
-    solventMl: 420,
-  },
-  // NTG
-  {
-    drug: "ntg",
-    ampule: "50 mg/10 ml (5 mg/ml)",
-    conc: "1:1",
-    total: 100,
-    drugMl: 20,
-    solventMl: 80,
-  },
-  {
-    drug: "ntg",
-    ampule: "50 mg/10 ml (5 mg/ml)",
-    conc: "1:1",
-    total: 250,
-    drugMl: 50,
-    solventMl: 200,
-  },
-  {
-    drug: "ntg",
-    ampule: "50 mg/10 ml (5 mg/ml)",
-    conc: "1:1",
-    total: 500,
-    drugMl: 100,
-    solventMl: 400,
-  },
-  // Primacor
-  {
-    drug: "primacor",
-    ampule: "10 mg/10 ml (1 mg/ml)",
-    conc: "1:5",
-    total: 100,
-    drugMl: 20,
-    solventMl: 80,
-  },
-  {
-    drug: "primacor",
-    ampule: "10 mg/10 ml (1 mg/ml)",
-    conc: "1:5",
-    total: 50,
-    drugMl: 10,
-    solventMl: 40,
-  },
-];
+// Build URL synonym map dynamically from the unified DB
+const SYNS = {};
+for (const d of DRUGS) {
+  (d.synonyms || []).forEach((s) => (SYNS[s.toLowerCase()] = d.id));
+}
+
+// We’re now 100% computed-prep; no legacy PREP_DATA required
+const USE_COMPUTED_PREP = true;
 
 /* ---------- i18n (English / Thai) ---------- */
 let LANG = "en";
@@ -343,6 +183,38 @@ const shareLink = $("shareLink"),
   qrBtn = $("qrBtn");
 const qrContainer = $("qrcode");
 
+function ratioToMgPerMl(concStr) {
+  if (!concStr) return null;
+  const [mg, ml] = concStr.split(":").map(Number);
+  if (!isFinite(mg) || !isFinite(ml) || ml === 0) return null;
+  return mg / ml; // mg per mL
+}
+
+function computePrepOutputs(amp, concStr, totalMl) {
+  const mgPerMl = ratioToMgPerMl(concStr);
+  if (!amp || !isFinite(totalMl) || !mgPerMl) return null;
+  const requiredMg = mgPerMl * totalMl; // mg needed in the bag
+  const drugMl = requiredMg / amp.concMgPerMl; // mL to draw from ampule(s)
+  const solventMl = totalMl - drugMl; // remainder
+  return { drugMl, solventMl };
+}
+
+function chooseDefaultTotal(drug, conc) {
+  const allowedArr = drug.prepVolumesByConc?.[conc] || [];
+  const allowed = new Set(allowedArr);
+
+  // Prefer the drug's defaultTotal if it's allowed for this conc
+  if (drug.defaultTotal != null && allowed.has(drug.defaultTotal)) {
+    return drug.defaultTotal;
+  }
+  // Otherwise pick the first canonical total that is allowed
+  for (const t of CANON_TOTALS) {
+    if (allowed.has(t)) return t;
+  }
+  // No allowed totals for this conc
+  return null;
+}
+
 /* --- Prep DOM --- */
 const ampuleGroup = document.getElementById("ampuleGroup");
 const totalGroup = document.getElementById("totalGroup");
@@ -351,7 +223,7 @@ const outSolventMl = document.getElementById("outSolventMl");
 
 let mode = "forward";
 let booting = true;
-let prepState = { ampule: null, total: null };
+let prepState = { ampIndex: null, total: null };
 
 function unique(list) {
   return [...new Set(list)];
@@ -360,81 +232,100 @@ function clear(el) {
   while (el.firstChild) el.removeChild(el.firstChild);
 }
 
-function makeChip(value, isActive, onClick) {
+function makeChip(value, isActive, onClick, disabled = false) {
   const b = document.createElement("button");
   b.type = "button";
-  b.className = "chipbtn" + (isActive ? " active" : "");
-  b.setAttribute("aria-pressed", isActive ? "true" : "false");
+
+  // Never show "active" for disabled chips
+  let cls = "chipbtn";
+  if (!disabled && isActive) cls += " active";
+  b.className = cls;
+
   b.textContent = value;
-  b.addEventListener("click", onClick);
+
+  if (disabled) {
+    b.disabled = true;
+    b.setAttribute("aria-disabled", "true");
+    // Remove pressed semantics & focusability for disabled
+    b.removeAttribute("aria-pressed");
+    b.tabIndex = -1;
+    b.title = "Not available for this concentration";
+  } else {
+    b.setAttribute("aria-pressed", isActive ? "true" : "false");
+    b.addEventListener("click", onClick);
+  }
+
   return b;
 }
 
 function refreshPrepUI() {
-  // filter rows for current drug + selected conc
-  const dId = drugSel.value;
-  const conc = concSel.value;
-  const rows = PREP_DATA.filter((r) => r.drug === dId && r.conc === conc);
-
-  // If nothing to show, clear and bail
   clear(ampuleGroup);
   clear(totalGroup);
   outDrugMl.value = "";
   outSolventMl.value = "";
-  if (!rows.length) return;
 
-  // Ampule options
-  const ampules = unique(rows.map((r) => r.ampule));
-  if (!prepState.ampule || !ampules.includes(prepState.ampule)) {
-    prepState.ampule = ampules[0];
+  const d = DRUG_INDEX[drugSel.value];
+  const conc = concSel.value;
+  if (!d) return;
+
+  // --- Computed path (the only path now) ---
+  if (!d.ampules || !d.ampules.length) return;
+
+  // Ampule chips
+  if (prepState.ampIndex == null || !d.ampules[prepState.ampIndex]) {
+    prepState.ampIndex = 0;
   }
-  ampules.forEach((a) => {
+  d.ampules.forEach((amp, ix) => {
     ampuleGroup.appendChild(
-      makeChip(a, a === prepState.ampule, () => {
-        prepState.ampule = a;
-        // reset total when ampule changes
-        prepState.total = null;
-        refreshTotalsAndOutput(rows);
+      makeChip(amp.name, ix === prepState.ampIndex, () => {
+        prepState.ampIndex = ix;
+        // keep total if still allowed; otherwise pick a default
+        const allowed = new Set(d.prepVolumesByConc?.[conc] || []);
+        if (!allowed.has(prepState.total)) {
+          prepState.total = chooseDefaultTotal(d, conc);
+        }
+        refreshPrepUI(); // re-render to update active highlight
       })
     );
   });
 
-  // Totals + output
-  refreshTotalsAndOutput(rows);
-}
-
-function refreshTotalsAndOutput(rows) {
-  // rows already filtered by drug+conc; further filter by ampule
-  const subset = rows.filter((r) => r.ampule === prepState.ampule);
-  const totals = unique(subset.map((r) => r.total)).sort((a, b) => a - b);
-
-  clear(totalGroup);
-  if (!prepState.total || !totals.includes(prepState.total)) {
-    prepState.total = totals[0];
+  // Totals chips (always show full canonical list, disable when not allowed)
+  const allowed = new Set((d.prepVolumesByConc || {})[conc] || []);
+  if (!prepState.total || !allowed.has(prepState.total)) {
+    prepState.total = chooseDefaultTotal(d, conc);
   }
-  totals.forEach((t) => {
+  CANON_TOTALS.forEach((t) => {
+    const isAllowed = allowed.has(t);
     totalGroup.appendChild(
-      makeChip(String(t), t === prepState.total, () => {
-        prepState.total = t;
-        writePrepOutputs(subset);
-        // re-render totals to update active highlight
-        refreshTotalsAndOutput(rows);
-      })
+      makeChip(
+        String(t),
+        t === prepState.total,
+        () => {
+          if (!isAllowed) return;
+          prepState.total = t;
+          refreshPrepUI();
+        },
+        !isAllowed
+      )
     );
   });
 
-  writePrepOutputs(subset);
+  // Outputs
+  writeComputedOutputs(d);
 }
 
-function writePrepOutputs(subset) {
-  const row = subset.find((r) => r.total === prepState.total);
-  if (row) {
-    outDrugMl.value = Number(row.drugMl).toString();
-    outSolventMl.value = Number(row.solventMl).toString();
-  } else {
-    outDrugMl.value = "";
-    outSolventMl.value = "";
-  }
+function writeComputedOutputs(drug) {
+  outDrugMl.value = "";
+  outSolventMl.value = "";
+  const conc = concSel.value;
+  const total = prepState.total;
+  const amp = drug.ampules?.[prepState.ampIndex];
+
+  const res = computePrepOutputs(amp, conc, total);
+  if (!res) return;
+
+  outDrugMl.value = to1(res.drugMl);
+  outSolventMl.value = to1(res.solventMl);
 }
 
 /* ------------------ Utils ------------------ */
@@ -808,6 +699,7 @@ function attachEvents() {
     updateChip();
     applyDrugDefaults(true); // switch to this drug’s defaults
     recalc();
+    prepState = { ampIndex: null, total: null }; // reset selection when changing drug
     refreshPrepUI();
   });
 
