@@ -1,0 +1,290 @@
+:root {
+  --bg: #0b1220;
+  --card: #121a2b;
+  --muted: #8aa0c5;
+  --accent: #53b0ff;
+  --good: #37d67a;
+  --warn: #ffb020;
+  --bad: #ff5e73;
+  /* added defaults used in prep styles */
+  --border: rgba(255, 255, 255, 0.14);
+  --soft-border: rgba(255, 255, 255, 0.12);
+  --input-bg: #0b1324;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Helvetica,
+    Arial, sans-serif;
+  background: linear-gradient(135deg, #0a1020, #0d1630);
+}
+[lang="th"] {
+  font-family: "Prompt", system-ui, -apple-system, "Segoe UI", Roboto, Inter,
+    sans-serif;
+}
+.wrap {
+  max-width: 920px;
+  margin: auto;
+  padding: clamp(16px, 3vw, 32px);
+  color: #e9f1ff;
+}
+h1 {
+  font-size: clamp(20px, 3.8vw, 30px);
+  margin: 0 0 8px;
+}
+p.sub {
+  color: var(--muted);
+  margin: 0 0 18px;
+}
+.card {
+  background: var(--card);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: clamp(14px, 2.4vw, 22px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+  min-width: 300px;
+}
+.grid {
+  display: grid;
+  gap: 12px;
+}
+@media (min-width: 540px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+label {
+  display: block;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 6px 0 6px;
+}
+input,
+select,
+button,
+textarea {
+  width: 100%;
+  padding: 12px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #0b1324;
+  color: #eef3ff;
+  font-size: 16px;
+  outline: none;
+}
+input::placeholder {
+  color: #6e84a8;
+}
+.controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.toggle {
+  appearance: none;
+  width: 100%;
+  cursor: pointer;
+  background: var(--card);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+.toggle.active {
+  background: #10233b;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(83, 176, 255, 0.2) inset;
+}
+.result {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 12px;
+  background: #0f1b31;
+  border: 1px solid rgba(83, 176, 255, 0.25);
+}
+.result h2 {
+  margin: 0 0 4px;
+  font-size: clamp(18px, 3vw, 24px);
+}
+.result .value {
+  font-size: clamp(22px, 4.5vw, 34px);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.hint {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+.ok {
+  color: var(--good);
+}
+.warn {
+  color: var(--warn);
+}
+.bad {
+  color: var(--bad);
+}
+code {
+  background: #0b1324;
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  overflow-wrap: break-word;
+}
+
+/* Color chip beside Medicine select */
+.chip-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.chip {
+  width: 50px;
+  height: 44px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+
+/* Share row: responsive reflow */
+.share {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr; /* mobile: link on its own row */
+  align-items: stretch;
+  margin-top: 10px;
+}
+.share input {
+  grid-column: 1 / -1;
+}
+.btn-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* two buttons side-by-side under the input on small screens */
+  gap: 8px;
+}
+.share button {
+  width: 100%;
+} /* full-width buttons on small screens */
+
+@media (min-width: 540px) {
+  .share {
+    grid-template-columns: 1fr auto auto; /* link + 2 buttons in one row */
+    align-items: center;
+  }
+  .share input {
+    grid-column: auto; /* reset */
+  }
+  .btn-row {
+    display: contents; /* flatten the two buttons into the grid */
+  }
+  .share button {
+    width: 128px;
+  }
+}
+
+/* === Dilution (collapsible) === */
+.prep {
+  margin-top: 14px;
+  border: 1px solid var(--soft-border);
+  border-radius: 12px;
+  background: var(--card);
+}
+.prep summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 12px 14px;
+  border-bottom: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.prep summary::marker {
+  display: none;
+}
+.prep summary .chev {
+  margin-left: auto;
+  transition: transform 0.2s;
+}
+.prep[open] summary .chev {
+  transform: rotate(90deg);
+}
+.prep[open] summary {
+  border-bottom: 1px solid var(--soft-border);
+}
+.prep-grid {
+  padding: 12px 14px;
+  display: grid;
+  gap: 12px;
+}
+.prep-row {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr;
+}
+.prep-row .row-label {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+@media (min-width: 540px) {
+  .prep-row {
+    grid-template-columns: 220px 1fr;
+    align-items: center;
+  }
+  .prep-row .row-label {
+    text-align: right;
+    padding-right: 8px;
+  }
+}
+
+/* Button groups as flex, each button spans equally (flex:1) */
+.btn-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.btn-group--equal .chipbtn {
+  flex: 1 1 160px; /* equal width columns, wrap as needed */
+}
+
+.chipbtn {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
+  transition: background 0.15s, box-shadow 0.15s, border-color 0.15s,
+    color 0.15s;
+}
+.chipbtn:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+}
+.chipbtn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(83, 176, 255, 0.35);
+}
+/* Stronger highlight for selected */
+.chipbtn.active,
+.chipbtn[aria-pressed="true"] {
+  background: #10233b;
+  color: #eaf4ff;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(83, 176, 255, 0.25) inset;
+}
+
+.prep-outputs {
+  display: grid;
+  gap: 8px;
+}
+@media (min-width: 540px) {
+  .prep-outputs {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.prep-outputs input {
+  width: 100%;
+}
