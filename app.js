@@ -127,37 +127,73 @@ const I18N = {
     within: "Within range",
     above: "Above max",
     range(min, max, drug) {
-      return ` • Range: <b>${min}</b> to <b>${max}</b> mcg/kg/min for ${drug}.`;
+      /* … */
     },
     limits(b, conc, pMax, maxRate) {
-      return `For weight <b>${b} kg</b> and concentration <b>${conc}</b>, max dose is <b>${pMax} mcg/kg/min</b> → max infusion <b>${maxRate} mL/hr</b>.`;
+      /* … */
     },
     noMax(drug) {
-      return `No specified maximum dose in table for ${drug}.`;
+      /* … */
     },
     modeForward: "mcg/kg/min → mL/hr (Tap to change mode)",
     modeReverse: "mL/hr → mcg/kg/min (Tap to change mode)",
+
+    // NEW
+    prepTitle: "Preparation guide",
+    ampulesLabel: "Available Portions",
+    totalLabel: "Total Solution (mL)",
+    volumesLabel: "Volumes",
+    drugNeeded: "Drug needed (mL)",
+    solventNeeded: "Solvent needed (mL)",
   },
   th: {
     below: "ต่ำกว่าเกณฑ์",
     within: "อยู่ในเกณฑ์",
     above: "สูงกว่าเกณฑ์",
     range(min, max, drug) {
-      return ` • ขนาดที่กำหนด: <b>${min}</b> ถึง <b>${max} mcg/kg/min</b> สำหรับ <b>${drug}</b>.`;
+      /* … */
     },
     limits(b, conc, pMax, maxRate) {
-      return `สำหรับน้ำหนัก <b>${b} kg</b> และความเข้มข้น <b>${conc}</b>, Dose สูงสุดคือ <b>${pMax} mcg/kg/min</b> → Infusion rate สูงสุด <b>${maxRate} mL/hr</b>.`;
+      /* … */
     },
     noMax(drug) {
-      return `ไม่มีการระบุขนาดยาสูงสุดในตารางสำหรับ ${drug}.`;
+      /* … */
     },
     modeForward: "mcg/kg/min → mL/hr (กดเพื่อเปลี่ยนโหมด)",
     modeReverse: "mL/hr → mcg/kg/min (กดเพื่อเปลี่ยนโหมด)",
+
+    // NEW
+    prepTitle: "วิธีการเตรียมยา",
+    ampulesLabel: "เลือกขนาดยา",
+    totalLabel: "ปริมาตรเต็ม (mL)",
+    volumesLabel: "ปริมาตรที่คำนวณได้",
+    drugNeeded: "ปริมาตรยาที่ใช้ (mL)",
+    solventNeeded: "ปริมาตรสารละลายที่ใช้ (mL)",
   },
 };
+
 const dict = () => (LANG === "th" ? I18N.th : I18N.en);
 const normalizeLang = (s) =>
   ["th", "thai", "th-th"].includes((s || "").toLowerCase()) ? "th" : "en";
+
+function localizePrepSection() {
+  const D = dict();
+
+  // Title inside the <summary>
+  const prepTitleEl = document.querySelector("#prep summary strong");
+  if (prepTitleEl) prepTitleEl.textContent = D.prepTitle;
+
+  // Three row labels (ordered): ampules, total, volumes
+  const rowLabels = document.querySelectorAll("#prep .prep-row .row-label");
+  if (rowLabels[0]) rowLabels[0].textContent = D.ampulesLabel;
+  if (rowLabels[1]) rowLabels[1].textContent = D.totalLabel;
+  if (rowLabels[2]) rowLabels[2].textContent = D.volumesLabel;
+
+  // The two inner labels under "Volumes"
+  const volLabels = document.querySelectorAll(".prep-outputs label");
+  if (volLabels[0]) volLabels[0].textContent = D.drugNeeded;
+  if (volLabels[1]) volLabels[1].textContent = D.solventNeeded;
+}
 
 /* ------------------ DOM helpers ------------------ */
 const $ = (id) => document.getElementById(id);
@@ -744,6 +780,7 @@ function hydrateFromURL() {
   // Language (also set <html lang> for Thai font)
   LANG = normalizeLang(lang);
   document.documentElement.setAttribute("lang", LANG);
+  localizePrepSection(); // <- add this line
 
   // Drug
   const dId = drug && DRUG_INDEX[drug] ? drug : DRUGS[0].id;
@@ -777,6 +814,7 @@ function init() {
   populateDrugOptions();
   attachEvents();
   hydrateFromURL();
+  localizePrepSection(); // <- add this line
   booting = false;
   refreshPrepUI();
   recalc();

@@ -1027,3 +1027,25 @@ function init() {
   updateShareLink();
 }
 init();
+
+------------------------------------------------------------------------------------------------------------------------------------------------------
+
+I want to add a small text about preparation specification/warning on the last row, under the the volume outputs. Thus, we need to add another data for each drugs into our database.
+
+Dopamine: ""
+Dobutamine: ""
+Adrinaline: ""
+Levophed: "Must be diluted in D5W or D5S only"
+NTG: ""
+Primacor: ""
+
+------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Add these translations for Thai language.
+
+"Preparation guide" -> "วิธีการเตรียมยา"
+"Available Portions" -> "เลือกขนาดยา"
+"Total Solution (mL)" -> "ปริมาตรเต็ม (mL)"
+"Volumes" -> "ปริมาตรที่คำนวณได้"
+"Drug needed (mL)" -> "ปริมาตรยาที่ใช้ (mL)"
+"Solvent needed (mL)" -> "ปริมาตรสารละลายที่ใช้ (mL)"

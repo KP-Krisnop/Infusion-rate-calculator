@@ -230,7 +230,7 @@ code {
 }
 @media (min-width: 540px) {
   .prep-row {
-    grid-template-columns: 220px 1fr;
+    grid-template-columns: 160px 1fr;
     align-items: center;
   }
   .prep-row .row-label {
@@ -247,7 +247,7 @@ code {
 }
 .btn-group--equal .chipbtn {
   /* equal width columns, wrap as needed */
-  flex: 1 1;
+  flex: 1;
 }
 
 .chipbtn {
