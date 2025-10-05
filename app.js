@@ -127,13 +127,13 @@ const I18N = {
     within: "Within range",
     above: "Above max",
     range(min, max, drug) {
-      /* … */
+      return ` • Range: <b>${min}</b> to <b>${max}</b> mcg/kg/min for ${drug}.`;
     },
     limits(b, conc, pMax, maxRate) {
-      /* … */
+      return `For weight <b>${b} kg</b> and concentration <b>${conc}</b>, max dose is <b>${pMax} mcg/kg/min</b> → max infusion <b>${maxRate} mL/hr</b>.`;
     },
     noMax(drug) {
-      /* … */
+      return `No specified maximum dose in table for ${drug}.`;
     },
     modeForward: "mcg/kg/min → mL/hr (Tap to change mode)",
     modeReverse: "mL/hr → mcg/kg/min (Tap to change mode)",
@@ -151,13 +151,13 @@ const I18N = {
     within: "อยู่ในเกณฑ์",
     above: "สูงกว่าเกณฑ์",
     range(min, max, drug) {
-      /* … */
+      return ` • ขนาดที่กำหนด: <b>${min}</b> ถึง <b>${max} mcg/kg/min</b> สำหรับ <b>${drug}</b>.`;
     },
     limits(b, conc, pMax, maxRate) {
-      /* … */
+      return `สำหรับน้ำหนัก <b>${b} kg</b> และความเข้มข้น <b>${conc}</b>, Dose สูงสุดคือ <b>${pMax} mcg/kg/min</b> → Infusion rate สูงสุด <b>${maxRate} mL/hr</b>.`;
     },
     noMax(drug) {
-      /* … */
+      return `ไม่มีการระบุขนาดยาสูงสุดในตารางสำหรับ ${drug}.`;
     },
     modeForward: "mcg/kg/min → mL/hr (กดเพื่อเปลี่ยนโหมด)",
     modeReverse: "mL/hr → mcg/kg/min (กดเพื่อเปลี่ยนโหมด)",
