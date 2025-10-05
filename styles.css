@@ -21,8 +21,8 @@ body {
   background: linear-gradient(135deg, #0a1020, #0d1630);
 }
 [lang="th"] {
-  font-family: "Prompt", system-ui, -apple-system, "Segoe UI", Roboto, Inter,
-    sans-serif;
+  font-family: "Noto Sans Thai", system-ui, -apple-system, "Segoe UI", Roboto,
+    Inter, sans-serif;
 }
 .wrap {
   max-width: 920px;
@@ -248,6 +248,20 @@ code {
 .btn-group--equal .chipbtn {
   /* equal width columns, wrap as needed */
   flex: 1;
+}
+
+.prep-note {
+  display: block;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted); /* normal (white-ish) */
+  opacity: 0.85;
+}
+
+.prep-note.critical {
+  color: var(--bad); /* dimmed red tone you already use */
+  opacity: 0.85;
+  font-weight: 600;
 }
 
 .chipbtn {

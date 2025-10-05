@@ -12,9 +12,11 @@ const DRUGS = [
     defaultTotal: 100,
     synonyms: ["dopa"],
     ampules: [{ name: "250 mg/10 mL (25 mg/mL)", sizeMl: 10, concMgPerMl: 25 }],
-    prepVolumesByConc: {
-      "1:1": [100, 250, 500],
-      "2:1": [100, 250, 500],
+    prepVolumesByConc: { "1:1": [100, 250, 500], "2:1": [100, 250, 500] },
+    prepNote: {
+      en: "Diluted in NSS, D5W or D5S",
+      th: "ผสมใน NSS, D5W หรือ D5S",
+      critical: false,
     },
   },
   {
@@ -31,9 +33,11 @@ const DRUGS = [
     ampules: [
       { name: "250 mg/20 mL (12.5 mg/mL)", sizeMl: 20, concMgPerMl: 12.5 },
     ],
-    prepVolumesByConc: {
-      "1:1": [100, 250, 500],
-      "2:1": [100, 250, 500],
+    prepVolumesByConc: { "1:1": [100, 250, 500], "2:1": [100, 250, 500] },
+    prepNote: {
+      en: "Diluted in NSS, D5W or D5S",
+      th: "ผสมใน NSS, D5W หรือ D5S",
+      critical: false,
     },
   },
   {
@@ -48,8 +52,11 @@ const DRUGS = [
     defaultTotal: 100,
     synonyms: ["epinephrine", "adr"],
     ampules: [{ name: "1 mg/mL (1:1000) 1 mL", sizeMl: 1, concMgPerMl: 1 }],
-    prepVolumesByConc: {
-      "1:10": [100, 250, 500],
+    prepVolumesByConc: { "1:10": [100, 250, 500] },
+    prepNote: {
+      en: "Diluted in NSS, D5W or D5S",
+      th: "ผสมใน NSS, D5W หรือ D5S",
+      critical: false,
     },
   },
   {
@@ -64,10 +71,11 @@ const DRUGS = [
     defaultTotal: 100,
     synonyms: ["norepi", "norepinephrine", "noradrenaline"],
     ampules: [{ name: "4 mg/4 mL (1 mg/mL)", sizeMl: 4, concMgPerMl: 1 }],
-    prepVolumesByConc: {
-      "4:100": [100],
-      "8:100": [100],
-      "4:250": [250, 500],
+    prepVolumesByConc: { "4:100": [100], "8:100": [100], "4:250": [250, 500] },
+    prepNote: {
+      en: "Must be diluted in D5W or D5S only",
+      th: "ผสมใน D5W หรือ D5S เท่านั้น",
+      critical: true,
     },
   },
   {
@@ -82,8 +90,11 @@ const DRUGS = [
     defaultTotal: 100,
     synonyms: ["milrinone"],
     ampules: [{ name: "10 mg/10 mL (1 mg/mL)", sizeMl: 10, concMgPerMl: 1 }],
-    prepVolumesByConc: {
-      "1:5": [50, 100],
+    prepVolumesByConc: { "1:5": [50, 100] },
+    prepNote: {
+      en: "Diluted in NSS, D5W or D5S",
+      th: "ผสมใน NSS, D5W หรือ D5S",
+      critical: false,
     },
   },
   {
@@ -98,9 +109,11 @@ const DRUGS = [
     defaultTotal: 100,
     synonyms: ["nitroglycerin", "nitroglycerine"],
     ampules: [{ name: "50 mg/10 mL (5 mg/mL)", sizeMl: 10, concMgPerMl: 5 }],
-    prepVolumesByConc: {
-      "1:1": [100, 250, 500],
-      // Intentionally omit "2:1" so all totals show but are disabled for that conc
+    prepVolumesByConc: { "1:1": [100, 250, 500] /* 2:1 omitted on purpose */ },
+    prepNote: {
+      en: "Diluted in NSS, D5W or D5S",
+      th: "ผสมใน NSS, D5W หรือ D5S",
+      critical: false,
     },
   },
 ];
@@ -181,18 +194,36 @@ function localizePrepSection() {
 
   // Title inside the <summary>
   const prepTitleEl = document.querySelector("#prep summary strong");
-  if (prepTitleEl) prepTitleEl.textContent = D.prepTitle;
+  if (prepTitleEl) {
+    prepTitleEl.textContent = D.prepTitle;
+    setLangAttr(prepTitleEl, LANG);
+  }
 
   // Three row labels (ordered): ampules, total, volumes
   const rowLabels = document.querySelectorAll("#prep .prep-row .row-label");
-  if (rowLabels[0]) rowLabels[0].textContent = D.ampulesLabel;
-  if (rowLabels[1]) rowLabels[1].textContent = D.totalLabel;
-  if (rowLabels[2]) rowLabels[2].textContent = D.volumesLabel;
+  if (rowLabels[0]) {
+    rowLabels[0].textContent = D.ampulesLabel;
+    setLangAttr(rowLabels[0], LANG);
+  }
+  if (rowLabels[1]) {
+    rowLabels[1].textContent = D.totalLabel;
+    setLangAttr(rowLabels[1], LANG);
+  }
+  if (rowLabels[2]) {
+    rowLabels[2].textContent = D.volumesLabel;
+    setLangAttr(rowLabels[2], LANG);
+  }
 
   // The two inner labels under "Volumes"
   const volLabels = document.querySelectorAll(".prep-outputs label");
-  if (volLabels[0]) volLabels[0].textContent = D.drugNeeded;
-  if (volLabels[1]) volLabels[1].textContent = D.solventNeeded;
+  if (volLabels[0]) {
+    volLabels[0].textContent = D.drugNeeded;
+    setLangAttr(volLabels[0], LANG);
+  }
+  if (volLabels[1]) {
+    volLabels[1].textContent = D.solventNeeded;
+    setLangAttr(volLabels[1], LANG);
+  }
 }
 
 /* ------------------ DOM helpers ------------------ */
@@ -256,6 +287,7 @@ const ampuleGroup = document.getElementById("ampuleGroup");
 const totalGroup = document.getElementById("totalGroup");
 const outDrugMl = document.getElementById("outDrugMl");
 const outSolventMl = document.getElementById("outSolventMl");
+const prepNoteEl = document.getElementById("prepNote");
 
 let mode = "forward";
 let booting = true;
@@ -346,6 +378,20 @@ function refreshPrepUI() {
     );
   });
 
+  if (prepNoteEl) {
+    const note = d.prepNote
+      ? LANG === "th"
+        ? d.prepNote.th
+        : d.prepNote.en
+      : "";
+    prepNoteEl.textContent = note || "";
+    prepNoteEl.classList.toggle(
+      "critical",
+      !!(d.prepNote && d.prepNote.critical)
+    );
+    setLangAttr(prepNoteEl, LANG); // ← add this
+  }
+
   // Outputs
   writeComputedOutputs(d);
 }
@@ -372,6 +418,10 @@ const parseNum = (v) => {
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 };
+
+function setLangAttr(el, lang) {
+  if (el) el.setAttribute("lang", lang || "en");
+}
 
 /* ------------------ Core math ------------------ */
 const computeQ = (B, A) => (0.06 * B) / A; // mL/hr per (mcg/kg/min)
@@ -580,7 +630,9 @@ function showMode(newMode) {
   modeBtn.classList.toggle("active", mode === "reverse");
   const D = dict();
   modeBtn.textContent = mode === "forward" ? D.modeForward : D.modeReverse;
+  setLangAttr(modeBtn, LANG); // ← add this
 }
+
 function setIfProvided(inputEl, val, fmt) {
   if (val == null || !isFinite(val)) return;
   inputEl.value = fmt ? fmt(val) : val;
@@ -655,12 +707,15 @@ function recalc() {
     const status = pWithinRange(p, d);
     rangeNote.innerHTML = rangeLine(d, status);
   }
+  setLangAttr(rangeNote, LANG);
+  setLangAttr(limits, LANG);
 
   if (!booting) {
     updateShareLink();
     scheduleURLUpdate();
   }
 }
+
 function rangeLine(d, status) {
   const D = dict();
   const minTxt = d.pMin != null ? d.pMin.toFixed(2) : "—";
@@ -779,7 +834,7 @@ function hydrateFromURL() {
 
   // Language (also set <html lang> for Thai font)
   LANG = normalizeLang(lang);
-  document.documentElement.setAttribute("lang", LANG);
+  //   document.documentElement.setAttribute("lang", LANG);
   localizePrepSection(); // <- add this line
 
   // Drug

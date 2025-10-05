@@ -1030,14 +1030,23 @@ init();
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------
 
-I want to add a small text about preparation specification/warning on the last row, under the the volume outputs. Thus, we need to add another data for each drugs into our database.
+I want to add a small text about preparation specification/warning on the last row, under the the volume outputs. Thus, we need to add another data for each drugs into our database. When it comes to 'Levophed: "Must be diluted in D5W or D5S only"' or 'Levophed: "ผสมใน D5W หรือ D5S เท่านั้น"', I think the text should be dimmed red to make the user notice, but for others white should be fine. I don't know if the Thai translation should be separeated out of the database or not. You can decide whether or not to include them.
 
-Dopamine: ""
-Dobutamine: ""
-Adrinaline: ""
+English
+Dopamine: "Diluted in NSS, D5W or D5S"
+Dobutamine: "Diluted in NSS, D5W or D5S"
+Adrinaline: "Diluted in NSS, D5W or D5S"
 Levophed: "Must be diluted in D5W or D5S only"
-NTG: ""
-Primacor: ""
+NTG: "Diluted in NSS, D5W or D5S"
+Primacor: "Diluted in NSS, D5W or D5S"
+
+Thai
+Dopamine: "ผสมใน NSS, D5W หรือ D5S"
+Dobutamine: "ผสมใน NSS, D5W หรือ D5S"
+Adrinaline: "ผสมใน NSS, D5W หรือ D5S"
+Levophed: "ผสมใน D5W หรือ D5S เท่านั้น"
+NTG: "ผสมใน NSS, D5W หรือ D5S"
+Primacor: "ผสมใน NSS, D5W หรือ D5S"
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------
 
