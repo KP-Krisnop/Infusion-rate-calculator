@@ -1,5 +1,8 @@
 /* ------------------ Unified drug database ------------------ */
-const DRUGS = [
+// const DRUG_INDEX = Object.fromEntries(DRUGS.map((d) => [d.id, d]));
+
+// Replace: const DRUGS = [ ... ]
+const DEFAULT_DRUGS = [
   {
     id: "dopamine",
     name: "Dopamine",
@@ -118,7 +121,8 @@ const DRUGS = [
   },
 ];
 
-const DRUG_INDEX = Object.fromEntries(DRUGS.map((d) => [d.id, d]));
+let DRUGS = DEFAULT_DRUGS;
+let DRUG_INDEX = Object.fromEntries(DRUGS.map((d) => [d.id, d]));
 
 // Always show these totals in the UI
 const CANON_TOTALS = [50, 100, 250, 500];
@@ -128,9 +132,6 @@ const SYNS = {};
 for (const d of DRUGS) {
   (d.synonyms || []).forEach((s) => (SYNS[s.toLowerCase()] = d.id));
 }
-
-// We’re now 100% computed-prep; no legacy PREP_DATA required
-const USE_COMPUTED_PREP = true;
 
 /* ---------- i18n (English / Thai) ---------- */
 let LANG = "en";
@@ -184,6 +185,283 @@ const I18N = {
     solventNeeded: "ปริมาตรสารละลายที่ใช้ (mL)",
   },
 };
+
+// ==== Google Sheets (read-only) via GViz JSON ====
+const USE_SHEET_DB = true; // flip to false to fall back to local DB
+const SHEET_ID = "1jhCKA1P2vnUBzVfSmlP1TrXsinKdHL4iYKUR4MfV1go"; // from the sheet URL
+
+const SHEET_TABS = {
+  drugs: `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=drugs&tqx=out:json;headers=1`,
+  ampules: `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=ampules&tqx=out:json;headers=1`,
+  prepVolumes: `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=prep_volumes&tqx=out:json;headers=1`,
+  synonyms: `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=synonyms&tqx=out:json;headers=1`,
+};
+
+function parseNumberOrNull(v) {
+  if (v === null || v === undefined || v === "") return null; // <-- important
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+function normId(x) {
+  // use for keys you join on
+  return String(x ?? "")
+    .trim()
+    .toLowerCase();
+}
+function normStr(x) {
+  // use for display/text fields
+  return String(x ?? "").trim();
+}
+
+async function fetchGViz(url) {
+  const res = await fetch(url);
+  const text = await res.text();
+
+  // Prefer to capture the JSON inside setResponse(...)
+  const match = text.match(/setResponse\(([\s\S]*?)\)\s*;?\s*$/);
+  let jsonStr;
+  if (match && match[1]) {
+    jsonStr = match[1];
+  } else {
+    // Fallback: take substring from first { to last }
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}");
+    if (start === -1 || end === -1 || end <= start) {
+      throw new SyntaxError("Unexpected GViz payload format");
+    }
+    jsonStr = text.slice(start, end + 1);
+  }
+
+  const obj = JSON.parse(jsonStr);
+  return obj.table;
+}
+
+function tableToObjects(table) {
+  if (!table || !Array.isArray(table.cols) || !Array.isArray(table.rows)) {
+    return [];
+  }
+
+  const colLabels = table.cols.map((c) => (c.label ?? "").trim());
+  const colIds = table.cols.map((c) => (c.id ?? "").trim());
+
+  // Do the GViz columns look like generic letters (A, B, C...) with no labels?
+  const looksLettered =
+    colLabels.every((l) => !l) &&
+    colIds.length > 0 &&
+    colIds.every((id) => /^[A-Z]+$/.test(id));
+
+  let headers = [];
+  let startRow = 0;
+
+  if (looksLettered) {
+    // Treat the FIRST ROW as the header row
+    const headerRow = table.rows[0] || { c: [] };
+    headers = (headerRow.c || []).map((cell) =>
+      String(cell ? cell.f ?? cell.v : "").trim()
+    );
+    startRow = 1;
+  } else {
+    // Use labels when present; otherwise fall back to ids
+    headers = table.cols.map((c) => (c.label || c.id || "").trim());
+  }
+
+  // Final sanity: ensure headers are non-empty strings
+  headers = headers.map((h, i) => (h && h.length ? h : `col_${i + 1}`));
+
+  // Build objects from the remaining rows
+  const out = [];
+  for (let ri = startRow; ri < table.rows.length; ri++) {
+    const r = table.rows[ri];
+    if (!r || !r.c) continue;
+    const o = {};
+    headers.forEach((h, i) => {
+      const cell = r.c[i];
+      o[h] = cell ? cell.v : null;
+    });
+    // Skip pure-empty rows
+    if (Object.values(o).some((v) => v !== null && v !== "")) out.push(o);
+  }
+  return out;
+}
+
+async function loadDBFromSheets() {
+  const [tDrugs, tAmpules, tPrep, tSyn] = await Promise.all([
+    fetchGViz(SHEET_TABS.drugs),
+    fetchGViz(SHEET_TABS.ampules),
+    fetchGViz(SHEET_TABS.prepVolumes),
+    fetchGViz(SHEET_TABS.synonyms),
+  ]);
+
+  const drugsRows = tableToObjects(tDrugs);
+  const ampRows = tableToObjects(tAmpules);
+  const prepRows = tableToObjects(tPrep);
+  const synRows = tableToObjects(tSyn);
+
+  // Build drug map
+  const byId = new Map();
+  for (const r of drugsRows) {
+    const id = getField(r, "id");
+    const key = canonKey(id);
+    if (!key) continue;
+
+    const concList = String(getField(r, "conc") ?? "")
+      .split(/[,，]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    byId.set(key, {
+      id: key,
+      name: String(getField(r, "name") ?? key).trim(),
+      color: String(getField(r, "color") ?? "#444").trim(),
+      pMin: parseNumberOrNull(getField(r, "pMin")),
+      pMax: parseNumberOrNull(getField(r, "pMax")),
+      conc: concList,
+      defaultP: parseNumberOrNull(getField(r, "defaultP")),
+      defaultConc: String(
+        getField(r, "defaultConc") ?? concList[0] ?? ""
+      ).trim(),
+      defaultTotal: parseNumberOrNull(getField(r, "defaultTotal")),
+      synonyms: [],
+      ampules: [],
+      prepVolumesByConc: {},
+      prepNote: {
+        en: String(getField(r, "note_en") ?? "").trim(),
+        th: String(getField(r, "note_th") ?? "").trim(),
+        critical:
+          String(getField(r, "critical")).toLowerCase() === "true" ||
+          getField(r, "critical") === true,
+      },
+    });
+  }
+
+  // Ampules
+  let missingAmp = 0;
+  for (const a of ampRows) {
+    const d = byId.get(canonKey(getField(a, "drugId")));
+    if (!d) {
+      missingAmp++;
+      continue;
+    }
+    d.ampules.push({
+      name: String(getField(a, "name") ?? "").trim(),
+      sizeMl: parseNumberOrNull(getField(a, "sizeMl")),
+      concMgPerMl: parseNumberOrNull(getField(a, "concMgPerMl")),
+    });
+  }
+  if (missingAmp) {
+    console.warn(
+      `[ampules] ${missingAmp} rows didn’t join. Example headers:`,
+      debugKeys(ampRows[0])
+    );
+  }
+
+  // Prep volumes
+  let missingPrep = 0;
+  for (const p of prepRows) {
+    const d = byId.get(canonKey(getField(p, "drugId")));
+    if (!d) {
+      missingPrep++;
+      continue;
+    }
+    const conc = String(getField(p, "conc") ?? "").trim();
+    const totals = String(getField(p, "totals") ?? "")
+      .split(/[,，]/)
+      .map((x) => parseNumberOrNull(x))
+      .filter((n) => n != null);
+    if (!d.prepVolumesByConc[conc]) d.prepVolumesByConc[conc] = [];
+    d.prepVolumesByConc[conc].push(...totals);
+    d.prepVolumesByConc[conc] = Array.from(
+      new Set(d.prepVolumesByConc[conc])
+    ).sort((a, b) => a - b);
+  }
+  if (missingPrep) {
+    console.warn(
+      `[prep_volumes] ${missingPrep} rows didn’t join. Example headers:`,
+      debugKeys(prepRows[0])
+    );
+  }
+
+  // Synonyms
+  let missingSyn = 0;
+  for (const s of synRows) {
+    const d = byId.get(canonKey(getField(s, "drugId")));
+    if (!d) {
+      missingSyn++;
+      continue;
+    }
+    const syn = String(getField(s, "synonym") ?? "").trim();
+    if (syn) d.synonyms.push(syn);
+  }
+  if (missingSyn) {
+    console.warn(
+      `[synonyms] ${missingSyn} rows didn’t join. Example headers:`,
+      debugKeys(synRows[0])
+    );
+  }
+
+  const built = Array.from(byId.values());
+  if (!built.length) throw new Error("No drugs found in sheet.");
+
+  DRUGS = built;
+  DRUG_INDEX = Object.fromEntries(DRUGS.map((d) => [d.id, d]));
+  validateDB(DRUGS); // log-only; app still runs thanks to DEFAULT_DRUGS fallback on fetch errors
+
+  // Rebuild URL synonym map
+  for (const key of Object.keys(SYNS)) delete SYNS[key];
+  for (const d of DRUGS)
+    (d.synonyms || []).forEach((s) => (SYNS[s.toLowerCase()] = d.id));
+}
+
+function validateDB(drugs) {
+  const problems = [];
+
+  const ids = new Set();
+  for (const d of drugs) {
+    if (!d.id) problems.push(`Drug missing id`);
+    if (ids.has(d.id)) problems.push(`Duplicate id: ${d.id}`);
+    ids.add(d.id);
+
+    // pMax: blank = no-limit; 0 is allowed but suspicious
+    if (d.pMax === 0) {
+      problems.push(`Suspicious pMax=0 for ${d.id}. Leave blank for "no max".`);
+    }
+
+    // conc sanity
+    for (const c of d.conc) {
+      if (!/^\d+(\.\d+)?:\d+(\.\d+)?$/.test(c)) {
+        problems.push(`Bad conc "${c}" in ${d.id}`);
+      }
+    }
+
+    // prepVolumes concs should be valid
+    for (const c of Object.keys(d.prepVolumesByConc || {})) {
+      if (!/^\d+(\.\d+)?:\d+(\.\d+)?$/.test(c)) {
+        problems.push(`Bad prep conc "${c}" in ${d.id}`);
+      }
+      const totals = d.prepVolumesByConc[c] || [];
+      if (totals.some((t) => !(Number.isInteger(t) && t > 0))) {
+        problems.push(
+          `Bad totals for ${d.id} @ ${c}: ${JSON.stringify(totals)}`
+        );
+      }
+    }
+
+    // at least one ampule for a drug with prep
+    if (
+      Object.keys(d.prepVolumesByConc || {}).length &&
+      (!d.ampules || !d.ampules.length)
+    ) {
+      problems.push(`No ampules for ${d.id} but prep totals exist.`);
+    }
+  }
+
+  if (problems.length) {
+    console.warn(
+      `[schema] ${problems.length} issues:\n - ` + problems.join("\n - ")
+    );
+  }
+  return problems.length === 0;
+}
 
 const dict = () => (LANG === "th" ? I18N.th : I18N.en);
 const normalizeLang = (s) =>
@@ -293,9 +571,6 @@ let mode = "forward";
 let booting = true;
 let prepState = { ampIndex: null, total: null };
 
-function unique(list) {
-  return [...new Set(list)];
-}
 function clear(el) {
   while (el.firstChild) el.removeChild(el.firstChild);
 }
@@ -362,6 +637,14 @@ function refreshPrepUI() {
   if (!prepState.total || !allowed.has(prepState.total)) {
     prepState.total = chooseDefaultTotal(d, conc);
   }
+
+  if (allowed.size === 0) {
+    console.debug(
+      `[prep] No totals for ${d.id} at conc "${conc}". Known concs with totals:`,
+      Object.keys(d.prepVolumesByConc || {})
+    );
+  }
+
   CANON_TOTALS.forEach((t) => {
     const isAllowed = allowed.has(t);
     totalGroup.appendChild(
@@ -421,6 +704,30 @@ const parseNum = (v) => {
 
 function setLangAttr(el, lang) {
   if (el) el.setAttribute("lang", lang || "en");
+}
+
+// Canonicalize header names / join keys
+function canonKey(x) {
+  return String(x ?? "")
+    .toLowerCase()
+    .replace(/[\u200B-\u200D\uFEFF]/g, "") // zero-widths
+    .replace(/\s|[_-]/g, ""); // spaces/underscores/hyphens
+}
+
+// Safely get a field from a row, even if the header contains weird chars
+function getField(row, name) {
+  if (!row) return undefined;
+  if (name in row) return row[name];
+  const want = canonKey(name);
+  for (const k of Object.keys(row)) {
+    if (canonKey(k) === want) return row[k];
+  }
+  return undefined;
+}
+
+// For debugging headers visually
+function debugKeys(row) {
+  return Object.keys(row).map((k) => `${k} -> ${canonKey(k)}`);
 }
 
 /* ------------------ Core math ------------------ */
@@ -596,7 +903,23 @@ function updateShareLink() {
 }
 
 /* ------------------ UI & state ------------------ */
+function populateConcs() {
+  const d = DRUG_INDEX[drugSel.value];
+  concSel.innerHTML = "";
+
+  const fromDrug = Array.isArray(d.conc) ? d.conc : [];
+  const fromPrep = Object.keys(d.prepVolumesByConc || {});
+  const concs = Array.from(new Set([...fromDrug, ...fromPrep]));
+
+  concs.forEach((c) => {
+    const opt = document.createElement("option");
+    opt.value = c;
+    opt.textContent = c;
+    concSel.appendChild(opt);
+  });
+}
 function populateDrugOptions() {
+  drugSel.innerHTML = ""; // prevent duplicates if reloaded
   for (const d of DRUGS) {
     const opt = document.createElement("option");
     opt.value = d.id;
@@ -604,16 +927,7 @@ function populateDrugOptions() {
     drugSel.appendChild(opt);
   }
 }
-function populateConcs() {
-  const d = DRUG_INDEX[drugSel.value];
-  concSel.innerHTML = "";
-  d.conc.forEach((c) => {
-    const opt = document.createElement("option");
-    opt.value = c;
-    opt.textContent = c;
-    concSel.appendChild(opt);
-  });
-}
+
 function updateChip() {
   const d = DRUG_INDEX[drugSel.value];
   drugChip.style.background = d ? d.color : "#444";
@@ -865,11 +1179,22 @@ function hydrateFromURL() {
 }
 
 /* ------------------ Init ------------------ */
-function init() {
+async function init() {
+  try {
+    if (USE_SHEET_DB) {
+      await loadDBFromSheets();
+      // (optional) console.log("Loaded DB from Sheets:", DRUGS);
+    }
+  } catch (err) {
+    console.warn("Falling back to local DB:", err);
+    DRUGS = DEFAULT_DRUGS;
+    DRUG_INDEX = Object.fromEntries(DRUGS.map((d) => [d.id, d]));
+  }
+
   populateDrugOptions();
   attachEvents();
   hydrateFromURL();
-  localizePrepSection(); // <- add this line
+  localizePrepSection();
   booting = false;
   refreshPrepUI();
   recalc();
