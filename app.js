@@ -1178,13 +1178,23 @@ function hydrateFromURL() {
   }
 }
 
-/* ------------------ Init ------------------ */
+const DB_URL =
+  "https://script.google.com/macros/s/AKfycbx-Hj2g-8aeN72dM6XJtbOnwyZ9MivBXGBlVEF70XKtkT7O14KfBEAetHIHrCOLRp1ayA/exec"; // from Apps Script deployment
+
+async function fetchDbJson() {
+  console.log("fetching");
+  const res = await fetch(DB_URL, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Fetch DB failed: ${res.status}`);
+  const data = await res.json();
+  if (!data || !Array.isArray(data.drugs)) throw new Error("Bad DB payload");
+  return data;
+}
+
 async function init() {
   try {
-    if (USE_SHEET_DB) {
-      await loadDBFromSheets();
-      // (optional) console.log("Loaded DB from Sheets:", DRUGS);
-    }
+    const data = await fetchDbJson(); // ← reads JSON, not live sheet
+    DRUGS = data.drugs;
+    DRUG_INDEX = Object.fromEntries(DRUGS.map((d) => [d.id, d]));
   } catch (err) {
     console.warn("Falling back to local DB:", err);
     DRUGS = DEFAULT_DRUGS;
