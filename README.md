@@ -1,4 +1,5 @@
 # High-Alert Drug Infusion Calculator
+[High-Alert Drug Infusion Calculator](https://sakongroup.net/sakonhospital/)
 
 A lightweight web app that helps clinicians convert **mcg/kg/min ↔ mL/hr** for common vasoactive and high-alert drugs. It renders instantly with a built-in dataset and then upgrades itself from a maintained Google Sheet via a JSON endpoint.
 
