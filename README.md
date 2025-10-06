@@ -1,7 +1,3 @@
-Here’s a tight, publish-ready `README.md` focused on the frontend and the database editing flow (with your links, names, and credits baked in).
-
----
-
 # High-Alert Drug Infusion Calculator
 
 A lightweight web app that helps clinicians convert **mcg/kg/min ↔ mL/hr** for common vasoactive and high-alert drugs. It renders instantly with a built-in dataset and then upgrades itself from a maintained Google Sheet via a JSON endpoint.
