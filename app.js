@@ -185,6 +185,9 @@ const normalizeLang = (s) =>
 const DB_URL =
   "https://script.google.com/macros/s/AKfycbx-Hj2g-8aeN72dM6XJtbOnwyZ9MivBXGBlVEF70XKtkT7O14KfBEAetHIHrCOLRp1ayA/exec";
 
+const SHEET_PUBLIC_URL =
+  "https://docs.google.com/spreadsheets/d/1FlAeLOLXkIFDQg41GQ4WKPD_IaIx_nYZb28lPL4ttrA";
+
 async function fetchDbJson() {
   const res = await fetch(DB_URL, { cache: "no-store" });
   if (!res.ok) throw new Error(`Fetch DB failed: ${res.status}`);
@@ -248,8 +251,28 @@ function setDbStatus(state, detail) {
 function initDbBar() {
   const btn = document.getElementById("dbRefreshBtn");
   if (btn) btn.addEventListener("click", () => refreshDatabase(true));
+
+  // NEW: make the left side clickable (and keyboard accessible)
+  const left = document.querySelector("#dbBar .dbbar-left");
+  if (left && !left._wired) {
+    const openSheet = (e) => {
+      // Open the public Google Sheet in a new tab, safely
+      window.open(SHEET_PUBLIC_URL, "_blank", "noopener,noreferrer");
+      e.preventDefault();
+    };
+    left.addEventListener("click", openSheet);
+    left.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") openSheet(e);
+    });
+    left.setAttribute("role", "link");
+    left.setAttribute("tabindex", "0");
+    left.setAttribute("title", "Open the public Google Sheet");
+    left.style.cursor = "pointer";
+    left._wired = true;
+  }
+
   setDbStatus("local");
-  // Keep "updated X ago" fresh while in live mode
+  // keep “updated X ago” fresh while live
   setInterval(() => {
     if (DB_STATUS_STATE === "live") setDbStatus("live");
   }, 30_000);
