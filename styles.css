@@ -38,6 +38,7 @@ p.sub {
   color: var(--muted);
   margin: 0 0 18px;
 }
+
 .card {
   background: var(--card);
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -45,7 +46,9 @@ p.sub {
   padding: clamp(14px, 2.4vw, 22px);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
   min-width: 300px;
+  position: relative;
 }
+
 .grid {
   display: grid;
   gap: 12px;
@@ -318,4 +321,57 @@ code {
 }
 .prep-outputs input {
   width: 100%;
+}
+/* Full-width DB status bar at bottom of card */
+.dbbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--soft-border);
+}
+.dbbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.dbbar .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffb020; /* default: local/offline */
+}
+.dbbar .dot.live {
+  background: var(--good);
+} /* green */
+.dbbar .dot.local {
+  background: var(--warn);
+} /* amber */
+.dbbar .dot.err {
+  background: var(--bad);
+} /* red */
+
+#dbRefreshBtn {
+  width: auto;
+  padding: 8px 12px;
+  font-size: 13px;
+  background: var(--card);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+#dbRefreshBtn p {
+  margin: 0px;
+  font-size: 1.1em;
+}
+#dbRefreshBtn[disabled] {
+  opacity: 0.6;
+  cursor: default;
 }

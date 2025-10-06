@@ -1,7 +1,7 @@
-/* ------------------ Unified drug database ------------------ */
-// const DRUG_INDEX = Object.fromEntries(DRUGS.map((d) => [d.id, d]));
+/* ======================= Instant UI + JSON DB (no GViz) ======================= */
+"use strict";
 
-// Replace: const DRUGS = [ ... ]
+/* ------------------ Built-in default DB (used at boot) ------------------ */
 const DEFAULT_DRUGS = [
   {
     id: "dopamine",
@@ -121,19 +121,15 @@ const DEFAULT_DRUGS = [
   },
 ];
 
-let DRUGS = DEFAULT_DRUGS;
+/* ------------------ Runtime DB state ------------------ */
+let DRUGS = DEFAULT_DRUGS.slice();
 let DRUG_INDEX = Object.fromEntries(DRUGS.map((d) => [d.id, d]));
-
-// Always show these totals in the UI
+const SYNS = {};
+for (const d of DRUGS)
+  (d.synonyms || []).forEach((s) => (SYNS[s.toLowerCase()] = d.id));
 const CANON_TOTALS = [50, 100, 250, 500];
 
-// Build URL synonym map dynamically from the unified DB
-const SYNS = {};
-for (const d of DRUGS) {
-  (d.synonyms || []).forEach((s) => (SYNS[s.toLowerCase()] = d.id));
-}
-
-/* ---------- i18n (English / Thai) ---------- */
+/* ------------------ i18n ------------------ */
 let LANG = "en";
 const I18N = {
   en: {
@@ -151,8 +147,6 @@ const I18N = {
     },
     modeForward: "mcg/kg/min → mL/hr (Tap to change mode)",
     modeReverse: "mL/hr → mcg/kg/min (Tap to change mode)",
-
-    // NEW
     prepTitle: "Preparation guide",
     ampulesLabel: "Available Portions",
     totalLabel: "Total Solution (mL)",
@@ -174,9 +168,7 @@ const I18N = {
       return `ไม่มีการระบุขนาดยาสูงสุดในตารางสำหรับ ${drug}.`;
     },
     modeForward: "mcg/kg/min → mL/hr (กดเพื่อเปลี่ยนโหมด)",
-    modeReverse: "mL/hr → mcg/kg/min (กดเพื่อเปลี่ยนโหมด)",
-
-    // NEW
+    modeReverse: "mL/hr → mcg/kg/นาที (กดเพื่อเปลี่ยนโหมด)",
     prepTitle: "วิธีการเตรียมยา",
     ampulesLabel: "เลือกขนาดยา",
     totalLabel: "ปริมาตรเต็ม (mL)",
@@ -185,323 +177,82 @@ const I18N = {
     solventNeeded: "ปริมาตรสารละลายที่ใช้ (mL)",
   },
 };
-
-// ==== Google Sheets (read-only) via GViz JSON ====
-const USE_SHEET_DB = true; // flip to false to fall back to local DB
-const SHEET_ID = "1jhCKA1P2vnUBzVfSmlP1TrXsinKdHL4iYKUR4MfV1go"; // from the sheet URL
-
-const SHEET_TABS = {
-  drugs: `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=drugs&tqx=out:json;headers=1`,
-  ampules: `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=ampules&tqx=out:json;headers=1`,
-  prepVolumes: `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=prep_volumes&tqx=out:json;headers=1`,
-  synonyms: `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=synonyms&tqx=out:json;headers=1`,
-};
-
-function parseNumberOrNull(v) {
-  if (v === null || v === undefined || v === "") return null; // <-- important
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-}
-function normId(x) {
-  // use for keys you join on
-  return String(x ?? "")
-    .trim()
-    .toLowerCase();
-}
-function normStr(x) {
-  // use for display/text fields
-  return String(x ?? "").trim();
-}
-
-async function fetchGViz(url) {
-  const res = await fetch(url);
-  const text = await res.text();
-
-  // Prefer to capture the JSON inside setResponse(...)
-  const match = text.match(/setResponse\(([\s\S]*?)\)\s*;?\s*$/);
-  let jsonStr;
-  if (match && match[1]) {
-    jsonStr = match[1];
-  } else {
-    // Fallback: take substring from first { to last }
-    const start = text.indexOf("{");
-    const end = text.lastIndexOf("}");
-    if (start === -1 || end === -1 || end <= start) {
-      throw new SyntaxError("Unexpected GViz payload format");
-    }
-    jsonStr = text.slice(start, end + 1);
-  }
-
-  const obj = JSON.parse(jsonStr);
-  return obj.table;
-}
-
-function tableToObjects(table) {
-  if (!table || !Array.isArray(table.cols) || !Array.isArray(table.rows)) {
-    return [];
-  }
-
-  const colLabels = table.cols.map((c) => (c.label ?? "").trim());
-  const colIds = table.cols.map((c) => (c.id ?? "").trim());
-
-  // Do the GViz columns look like generic letters (A, B, C...) with no labels?
-  const looksLettered =
-    colLabels.every((l) => !l) &&
-    colIds.length > 0 &&
-    colIds.every((id) => /^[A-Z]+$/.test(id));
-
-  let headers = [];
-  let startRow = 0;
-
-  if (looksLettered) {
-    // Treat the FIRST ROW as the header row
-    const headerRow = table.rows[0] || { c: [] };
-    headers = (headerRow.c || []).map((cell) =>
-      String(cell ? cell.f ?? cell.v : "").trim()
-    );
-    startRow = 1;
-  } else {
-    // Use labels when present; otherwise fall back to ids
-    headers = table.cols.map((c) => (c.label || c.id || "").trim());
-  }
-
-  // Final sanity: ensure headers are non-empty strings
-  headers = headers.map((h, i) => (h && h.length ? h : `col_${i + 1}`));
-
-  // Build objects from the remaining rows
-  const out = [];
-  for (let ri = startRow; ri < table.rows.length; ri++) {
-    const r = table.rows[ri];
-    if (!r || !r.c) continue;
-    const o = {};
-    headers.forEach((h, i) => {
-      const cell = r.c[i];
-      o[h] = cell ? cell.v : null;
-    });
-    // Skip pure-empty rows
-    if (Object.values(o).some((v) => v !== null && v !== "")) out.push(o);
-  }
-  return out;
-}
-
-async function loadDBFromSheets() {
-  const [tDrugs, tAmpules, tPrep, tSyn] = await Promise.all([
-    fetchGViz(SHEET_TABS.drugs),
-    fetchGViz(SHEET_TABS.ampules),
-    fetchGViz(SHEET_TABS.prepVolumes),
-    fetchGViz(SHEET_TABS.synonyms),
-  ]);
-
-  const drugsRows = tableToObjects(tDrugs);
-  const ampRows = tableToObjects(tAmpules);
-  const prepRows = tableToObjects(tPrep);
-  const synRows = tableToObjects(tSyn);
-
-  // Build drug map
-  const byId = new Map();
-  for (const r of drugsRows) {
-    const id = getField(r, "id");
-    const key = canonKey(id);
-    if (!key) continue;
-
-    const concList = String(getField(r, "conc") ?? "")
-      .split(/[,，]/)
-      .map((s) => s.trim())
-      .filter(Boolean);
-
-    byId.set(key, {
-      id: key,
-      name: String(getField(r, "name") ?? key).trim(),
-      color: String(getField(r, "color") ?? "#444").trim(),
-      pMin: parseNumberOrNull(getField(r, "pMin")),
-      pMax: parseNumberOrNull(getField(r, "pMax")),
-      conc: concList,
-      defaultP: parseNumberOrNull(getField(r, "defaultP")),
-      defaultConc: String(
-        getField(r, "defaultConc") ?? concList[0] ?? ""
-      ).trim(),
-      defaultTotal: parseNumberOrNull(getField(r, "defaultTotal")),
-      synonyms: [],
-      ampules: [],
-      prepVolumesByConc: {},
-      prepNote: {
-        en: String(getField(r, "note_en") ?? "").trim(),
-        th: String(getField(r, "note_th") ?? "").trim(),
-        critical:
-          String(getField(r, "critical")).toLowerCase() === "true" ||
-          getField(r, "critical") === true,
-      },
-    });
-  }
-
-  // Ampules
-  let missingAmp = 0;
-  for (const a of ampRows) {
-    const d = byId.get(canonKey(getField(a, "drugId")));
-    if (!d) {
-      missingAmp++;
-      continue;
-    }
-    d.ampules.push({
-      name: String(getField(a, "name") ?? "").trim(),
-      sizeMl: parseNumberOrNull(getField(a, "sizeMl")),
-      concMgPerMl: parseNumberOrNull(getField(a, "concMgPerMl")),
-    });
-  }
-  if (missingAmp) {
-    console.warn(
-      `[ampules] ${missingAmp} rows didn’t join. Example headers:`,
-      debugKeys(ampRows[0])
-    );
-  }
-
-  // Prep volumes
-  let missingPrep = 0;
-  for (const p of prepRows) {
-    const d = byId.get(canonKey(getField(p, "drugId")));
-    if (!d) {
-      missingPrep++;
-      continue;
-    }
-    const conc = String(getField(p, "conc") ?? "").trim();
-    const totals = String(getField(p, "totals") ?? "")
-      .split(/[,，]/)
-      .map((x) => parseNumberOrNull(x))
-      .filter((n) => n != null);
-    if (!d.prepVolumesByConc[conc]) d.prepVolumesByConc[conc] = [];
-    d.prepVolumesByConc[conc].push(...totals);
-    d.prepVolumesByConc[conc] = Array.from(
-      new Set(d.prepVolumesByConc[conc])
-    ).sort((a, b) => a - b);
-  }
-  if (missingPrep) {
-    console.warn(
-      `[prep_volumes] ${missingPrep} rows didn’t join. Example headers:`,
-      debugKeys(prepRows[0])
-    );
-  }
-
-  // Synonyms
-  let missingSyn = 0;
-  for (const s of synRows) {
-    const d = byId.get(canonKey(getField(s, "drugId")));
-    if (!d) {
-      missingSyn++;
-      continue;
-    }
-    const syn = String(getField(s, "synonym") ?? "").trim();
-    if (syn) d.synonyms.push(syn);
-  }
-  if (missingSyn) {
-    console.warn(
-      `[synonyms] ${missingSyn} rows didn’t join. Example headers:`,
-      debugKeys(synRows[0])
-    );
-  }
-
-  const built = Array.from(byId.values());
-  if (!built.length) throw new Error("No drugs found in sheet.");
-
-  DRUGS = built;
-  DRUG_INDEX = Object.fromEntries(DRUGS.map((d) => [d.id, d]));
-  validateDB(DRUGS); // log-only; app still runs thanks to DEFAULT_DRUGS fallback on fetch errors
-
-  // Rebuild URL synonym map
-  for (const key of Object.keys(SYNS)) delete SYNS[key];
-  for (const d of DRUGS)
-    (d.synonyms || []).forEach((s) => (SYNS[s.toLowerCase()] = d.id));
-}
-
-function validateDB(drugs) {
-  const problems = [];
-
-  const ids = new Set();
-  for (const d of drugs) {
-    if (!d.id) problems.push(`Drug missing id`);
-    if (ids.has(d.id)) problems.push(`Duplicate id: ${d.id}`);
-    ids.add(d.id);
-
-    // pMax: blank = no-limit; 0 is allowed but suspicious
-    if (d.pMax === 0) {
-      problems.push(`Suspicious pMax=0 for ${d.id}. Leave blank for "no max".`);
-    }
-
-    // conc sanity
-    for (const c of d.conc) {
-      if (!/^\d+(\.\d+)?:\d+(\.\d+)?$/.test(c)) {
-        problems.push(`Bad conc "${c}" in ${d.id}`);
-      }
-    }
-
-    // prepVolumes concs should be valid
-    for (const c of Object.keys(d.prepVolumesByConc || {})) {
-      if (!/^\d+(\.\d+)?:\d+(\.\d+)?$/.test(c)) {
-        problems.push(`Bad prep conc "${c}" in ${d.id}`);
-      }
-      const totals = d.prepVolumesByConc[c] || [];
-      if (totals.some((t) => !(Number.isInteger(t) && t > 0))) {
-        problems.push(
-          `Bad totals for ${d.id} @ ${c}: ${JSON.stringify(totals)}`
-        );
-      }
-    }
-
-    // at least one ampule for a drug with prep
-    if (
-      Object.keys(d.prepVolumesByConc || {}).length &&
-      (!d.ampules || !d.ampules.length)
-    ) {
-      problems.push(`No ampules for ${d.id} but prep totals exist.`);
-    }
-  }
-
-  if (problems.length) {
-    console.warn(
-      `[schema] ${problems.length} issues:\n - ` + problems.join("\n - ")
-    );
-  }
-  return problems.length === 0;
-}
-
 const dict = () => (LANG === "th" ? I18N.th : I18N.en);
 const normalizeLang = (s) =>
   ["th", "thai", "th-th"].includes((s || "").toLowerCase()) ? "th" : "en";
 
-function localizePrepSection() {
-  const D = dict();
+/* ------------------ DB fetch (Apps Script JSON) ------------------ */
+const DB_URL =
+  "https://script.google.com/macros/s/AKfycbx-Hj2g-8aeN72dM6XJtbOnwyZ9MivBXGBlVEF70XKtkT7O14KfBEAetHIHrCOLRp1ayA/exec";
 
-  // Title inside the <summary>
-  const prepTitleEl = document.querySelector("#prep summary strong");
-  if (prepTitleEl) {
-    prepTitleEl.textContent = D.prepTitle;
-    setLangAttr(prepTitleEl, LANG);
-  }
+async function fetchDbJson() {
+  const res = await fetch(DB_URL, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Fetch DB failed: ${res.status}`);
+  const data = await res.json();
+  if (!data || !Array.isArray(data.drugs)) throw new Error("Bad DB payload");
+  return data; // { schemaVersion, dataVersion, drugs }
+}
 
-  // Three row labels (ordered): ampules, total, volumes
-  const rowLabels = document.querySelectorAll("#prep .prep-row .row-label");
-  if (rowLabels[0]) {
-    rowLabels[0].textContent = D.ampulesLabel;
-    setLangAttr(rowLabels[0], LANG);
-  }
-  if (rowLabels[1]) {
-    rowLabels[1].textContent = D.totalLabel;
-    setLangAttr(rowLabels[1], LANG);
-  }
-  if (rowLabels[2]) {
-    rowLabels[2].textContent = D.volumesLabel;
-    setLangAttr(rowLabels[2], LANG);
-  }
+/* ------------------ Tiny DB status + refresh UI ------------------ */
+let DB_META = { source: "builtin", lastUpdated: null, version: null };
+let DB_STATUS_STATE = "local";
+let dbLoading = false;
 
-  // The two inner labels under "Volumes"
-  const volLabels = document.querySelectorAll(".prep-outputs label");
-  if (volLabels[0]) {
-    volLabels[0].textContent = D.drugNeeded;
-    setLangAttr(volLabels[0], LANG);
+function formatStamp(isoLike) {
+  try {
+    const d = new Date(isoLike);
+    const sec = Math.floor((Date.now() - d.getTime()) / 1000);
+    if (sec < 10) return "just now";
+    if (sec < 60) return `${sec}s ago`;
+    const mins = Math.floor(sec / 60);
+    if (mins < 60) return mins === 1 ? "1 min ago" : `${mins} mins ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return hrs === 1 ? "1 hour ago" : `${hrs} hours ago`;
+    const days = Math.floor(hrs / 24);
+    return days === 1 ? "1 day ago" : `${days} days ago`;
+  } catch {
+    return String(isoLike);
   }
-  if (volLabels[1]) {
-    volLabels[1].textContent = D.solventNeeded;
-    setLangAttr(volLabels[1], LANG);
+}
+
+function setDbStatus(state, detail) {
+  DB_STATUS_STATE = state;
+
+  const dot = document.getElementById("dbDot");
+  const txt = document.getElementById("dbText");
+  const btn = document.getElementById("dbRefreshBtn");
+  if (!dot || !txt || !btn) return;
+
+  if (state === "loading") {
+    dot.className = "dot local";
+    txt.textContent = "Loading database…";
+    btn.disabled = true;
+  } else if (state === "live") {
+    dot.className = "dot live";
+    const when = DB_META.lastUpdated
+      ? formatStamp(DB_META.lastUpdated)
+      : "just now";
+    txt.textContent = `Live • updated ${when}`;
+    btn.disabled = false;
+  } else if (state === "local") {
+    dot.className = "dot local";
+    txt.textContent = "Offline • using built-in data";
+    btn.disabled = false;
+  } else if (state === "error") {
+    dot.className = "dot err";
+    txt.textContent = detail || "Failed to load DB";
+    btn.disabled = false;
   }
+}
+
+function initDbBar() {
+  const btn = document.getElementById("dbRefreshBtn");
+  if (btn) btn.addEventListener("click", () => refreshDatabase(true));
+  setDbStatus("local");
+  // Keep "updated X ago" fresh while in live mode
+  setInterval(() => {
+    if (DB_STATUS_STATE === "live") setDbStatus("live");
+  }, 30_000);
 }
 
 /* ------------------ DOM helpers ------------------ */
@@ -527,80 +278,62 @@ const shareLink = $("shareLink"),
   copyBtn = $("copyBtn"),
   qrBtn = $("qrBtn");
 const qrContainer = $("qrcode");
+const ampuleGroup = $("ampuleGroup");
+const totalGroup = $("totalGroup");
+const outDrugMl = $("outDrugMl");
+const outSolventMl = $("outSolventMl");
+const prepNoteEl = $("prepNote");
+
+function setLangAttr(el, lang) {
+  if (el) el.setAttribute("lang", lang || "en");
+}
+
+/* ------------------ Prep UI + helpers ------------------ */
+let mode = "forward";
+let booting = true;
+let prepState = { ampIndex: null, total: null };
 
 function ratioToMgPerMl(concStr) {
   if (!concStr) return null;
   const [mg, ml] = concStr.split(":").map(Number);
   if (!isFinite(mg) || !isFinite(ml) || ml === 0) return null;
-  return mg / ml; // mg per mL
+  return mg / ml;
 }
-
 function computePrepOutputs(amp, concStr, totalMl) {
   const mgPerMl = ratioToMgPerMl(concStr);
   if (!amp || !isFinite(totalMl) || !mgPerMl) return null;
-  const requiredMg = mgPerMl * totalMl; // mg needed in the bag
-  const drugMl = requiredMg / amp.concMgPerMl; // mL to draw from ampule(s)
-  const solventMl = totalMl - drugMl; // remainder
+  const requiredMg = mgPerMl * totalMl;
+  const drugMl = requiredMg / amp.concMgPerMl;
+  const solventMl = totalMl - drugMl;
   return { drugMl, solventMl };
 }
-
 function chooseDefaultTotal(drug, conc) {
   const allowedArr = drug.prepVolumesByConc?.[conc] || [];
   const allowed = new Set(allowedArr);
-
-  // Prefer the drug's defaultTotal if it's allowed for this conc
-  if (drug.defaultTotal != null && allowed.has(drug.defaultTotal)) {
+  if (drug.defaultTotal != null && allowed.has(drug.defaultTotal))
     return drug.defaultTotal;
-  }
-  // Otherwise pick the first canonical total that is allowed
-  for (const t of CANON_TOTALS) {
-    if (allowed.has(t)) return t;
-  }
-  // No allowed totals for this conc
+  for (const t of CANON_TOTALS) if (allowed.has(t)) return t;
   return null;
 }
-
-/* --- Prep DOM --- */
-const ampuleGroup = document.getElementById("ampuleGroup");
-const totalGroup = document.getElementById("totalGroup");
-const outDrugMl = document.getElementById("outDrugMl");
-const outSolventMl = document.getElementById("outSolventMl");
-const prepNoteEl = document.getElementById("prepNote");
-
-let mode = "forward";
-let booting = true;
-let prepState = { ampIndex: null, total: null };
-
 function clear(el) {
-  while (el.firstChild) el.removeChild(el.firstChild);
+  while (el && el.firstChild) el.removeChild(el.firstChild);
 }
-
 function makeChip(value, isActive, onClick, disabled = false) {
   const b = document.createElement("button");
   b.type = "button";
-
-  // Never show "active" for disabled chips
-  let cls = "chipbtn";
-  if (!disabled && isActive) cls += " active";
-  b.className = cls;
-
+  b.className = "chipbtn" + (!disabled && isActive ? " active" : "");
   b.textContent = value;
-
   if (disabled) {
     b.disabled = true;
     b.setAttribute("aria-disabled", "true");
-    // Remove pressed semantics & focusability for disabled
-    b.removeAttribute("aria-pressed");
     b.tabIndex = -1;
     b.title = "Not available for this concentration";
   } else {
     b.setAttribute("aria-pressed", isActive ? "true" : "false");
     b.addEventListener("click", onClick);
   }
-
   return b;
 }
-
 function refreshPrepUI() {
   clear(ampuleGroup);
   clear(totalGroup);
@@ -610,40 +343,26 @@ function refreshPrepUI() {
   const d = DRUG_INDEX[drugSel.value];
   const conc = concSel.value;
   if (!d) return;
-
-  // --- Computed path (the only path now) ---
   if (!d.ampules || !d.ampules.length) return;
 
-  // Ampule chips
-  if (prepState.ampIndex == null || !d.ampules[prepState.ampIndex]) {
+  if (prepState.ampIndex == null || !d.ampules[prepState.ampIndex])
     prepState.ampIndex = 0;
-  }
+
   d.ampules.forEach((amp, ix) => {
     ampuleGroup.appendChild(
       makeChip(amp.name, ix === prepState.ampIndex, () => {
         prepState.ampIndex = ix;
-        // keep total if still allowed; otherwise pick a default
         const allowed = new Set(d.prepVolumesByConc?.[conc] || []);
-        if (!allowed.has(prepState.total)) {
+        if (!allowed.has(prepState.total))
           prepState.total = chooseDefaultTotal(d, conc);
-        }
-        refreshPrepUI(); // re-render to update active highlight
+        refreshPrepUI();
       })
     );
   });
 
-  // Totals chips (always show full canonical list, disable when not allowed)
   const allowed = new Set((d.prepVolumesByConc || {})[conc] || []);
-  if (!prepState.total || !allowed.has(prepState.total)) {
+  if (!prepState.total || !allowed.has(prepState.total))
     prepState.total = chooseDefaultTotal(d, conc);
-  }
-
-  if (allowed.size === 0) {
-    console.debug(
-      `[prep] No totals for ${d.id} at conc "${conc}". Known concs with totals:`,
-      Object.keys(d.prepVolumesByConc || {})
-    );
-  }
 
   CANON_TOTALS.forEach((t) => {
     const isAllowed = allowed.has(t);
@@ -672,23 +391,19 @@ function refreshPrepUI() {
       "critical",
       !!(d.prepNote && d.prepNote.critical)
     );
-    setLangAttr(prepNoteEl, LANG); // ← add this
+    setLangAttr(prepNoteEl, LANG);
   }
 
-  // Outputs
   writeComputedOutputs(d);
 }
-
 function writeComputedOutputs(drug) {
   outDrugMl.value = "";
   outSolventMl.value = "";
   const conc = concSel.value;
   const total = prepState.total;
   const amp = drug.ampules?.[prepState.ampIndex];
-
   const res = computePrepOutputs(amp, conc, total);
   if (!res) return;
-
   outDrugMl.value = to1(res.drugMl);
   outSolventMl.value = to1(res.solventMl);
 }
@@ -702,38 +417,10 @@ const parseNum = (v) => {
   return Number.isFinite(n) ? n : null;
 };
 
-function setLangAttr(el, lang) {
-  if (el) el.setAttribute("lang", lang || "en");
-}
-
-// Canonicalize header names / join keys
-function canonKey(x) {
-  return String(x ?? "")
-    .toLowerCase()
-    .replace(/[\u200B-\u200D\uFEFF]/g, "") // zero-widths
-    .replace(/\s|[_-]/g, ""); // spaces/underscores/hyphens
-}
-
-// Safely get a field from a row, even if the header contains weird chars
-function getField(row, name) {
-  if (!row) return undefined;
-  if (name in row) return row[name];
-  const want = canonKey(name);
-  for (const k of Object.keys(row)) {
-    if (canonKey(k) === want) return row[k];
-  }
-  return undefined;
-}
-
-// For debugging headers visually
-function debugKeys(row) {
-  return Object.keys(row).map((k) => `${k} -> ${canonKey(k)}`);
-}
-
 /* ------------------ Core math ------------------ */
-const computeQ = (B, A) => (0.06 * B) / A; // mL/hr per (mcg/kg/min)
-const computeRate = (P, Q) => P * Q; // mL/hr
-const computeP = (rate, Q) => rate / Q; // mcg/kg/min
+const computeQ = (B, A) => (0.06 * B) / A;
+const computeRate = (P, Q) => P * Q;
+const computeP = (rate, Q) => rate / Q;
 function pWithinRange(p, d) {
   if (p == null || !isFinite(p)) return null;
   if (d.pMax == null) return p >= d.pMin ? "ok" : "low";
@@ -751,25 +438,16 @@ function normalizeSlug(s) {
 }
 function parseHashParts() {
   const raw = (location.hash || "").replace(/^#/, "");
-  let path = "",
-    qs = "";
   if (!raw) return { path: "", qs: "" };
   if (raw.startsWith("/")) {
     const ix = raw.indexOf("?");
-    if (ix >= 0) {
-      path = raw.slice(1, ix);
-      qs = raw.slice(ix + 1);
-    } else {
-      path = raw.slice(1);
-    }
-  } else if (raw.startsWith("?")) {
-    qs = raw.slice(1);
-  } else if (raw.includes("=")) {
-    qs = raw;
-  } else {
-    path = raw;
+    return ix >= 0
+      ? { path: raw.slice(1, ix), qs: raw.slice(ix + 1) }
+      : { path: raw.slice(1), qs: "" };
   }
-  return { path, qs };
+  if (raw.startsWith("?")) return { path: "", qs: raw.slice(1) };
+  if (raw.includes("=")) return { path: "", qs: raw };
+  return { path: raw, qs: "" };
 }
 function getParamsFromURL() {
   const url = new URL(location.href);
@@ -802,7 +480,6 @@ function getParamsFromURL() {
     url.searchParams.get("language") ||
     url.searchParams.get("locale");
 
-  // Fallback: hash
   const { path, qs } = parseHashParts();
   const hashParams = new URLSearchParams(qs || "");
   if (!drug)
@@ -840,18 +517,14 @@ function getParamsFromURL() {
       hashParams.get("language") ||
       hashParams.get("locale");
 
-  // Fallback: path segment
   if (!drug) {
     const segs = (url.pathname || "").split("/").filter(Boolean);
-    if (segs.length) {
-      drug = normalizeSlug(segs[segs.length - 1]);
-    }
+    if (segs.length) drug = normalizeSlug(segs[segs.length - 1]);
   }
-
   const modeVal = (() => {
     const s = (modeRaw || "").toString().toLowerCase();
-    if (["reverse", "rev", "r"].includes(s)) return "reverse";
-    if (["1", "true", "yes", "on"].includes(s)) return "reverse";
+    if (["reverse", "rev", "r", "1", "true", "yes", "on"].includes(s))
+      return "reverse";
     return "forward";
   })();
 
@@ -863,14 +536,13 @@ function getParamsFromURL() {
   return { drug, mode: modeVal, conc, p, b, rate, lang };
 }
 
-/* ------------------ Build & write query URL ------------------ */
+/* ------------------ Share URL ------------------ */
 function buildShareParams() {
   const params = new URLSearchParams();
   params.set("drug", drugSel.value);
   params.set("mode", mode);
   params.set("lang", LANG);
   if (concSel.value) params.set("conc", concSel.value);
-
   if (mode === "forward") {
     if (P.value) params.set("p", to2(P.value));
     if (B.value) params.set("b", to1(B.value));
@@ -891,27 +563,23 @@ function buildURLWithParams() {
 let urlTimer = null;
 const URL_DEBOUNCE_MS = 250;
 function writeURLFromState_query() {
-  const newUrl = buildURLWithParams();
-  history.replaceState(null, "", newUrl);
+  history.replaceState(null, "", buildURLWithParams());
 }
 function scheduleURLUpdate() {
   clearTimeout(urlTimer);
   urlTimer = setTimeout(writeURLFromState_query, URL_DEBOUNCE_MS);
 }
 function updateShareLink() {
-  shareLink.value = buildURLWithParams();
+  if (shareLink) shareLink.value = buildURLWithParams();
 }
 
 /* ------------------ UI & state ------------------ */
 function populateConcs() {
   const d = DRUG_INDEX[drugSel.value];
   concSel.innerHTML = "";
-
-  const fromDrug = Array.isArray(d.conc) ? d.conc : [];
-  const fromPrep = Object.keys(d.prepVolumesByConc || {});
-  const concs = Array.from(new Set([...fromDrug, ...fromPrep]));
-
-  concs.forEach((c) => {
+  const fromDrug = Array.isArray(d?.conc) ? d.conc : [];
+  const fromPrep = Object.keys(d?.prepVolumesByConc || {});
+  Array.from(new Set([...fromDrug, ...fromPrep])).forEach((c) => {
     const opt = document.createElement("option");
     opt.value = c;
     opt.textContent = c;
@@ -919,7 +587,7 @@ function populateConcs() {
   });
 }
 function populateDrugOptions() {
-  drugSel.innerHTML = ""; // prevent duplicates if reloaded
+  drugSel.innerHTML = "";
   for (const d of DRUGS) {
     const opt = document.createElement("option");
     opt.value = d.id;
@@ -927,14 +595,15 @@ function populateDrugOptions() {
     drugSel.appendChild(opt);
   }
 }
-
 function updateChip() {
   const d = DRUG_INDEX[drugSel.value];
-  drugChip.style.background = d ? d.color : "#444";
-  drugChip.title = d ? d.name : "";
+  if (drugChip) {
+    drugChip.style.background = d ? d.color : "#444";
+    drugChip.title = d ? d.name : "";
+  }
 }
 function parseA() {
-  const [x, y] = concSel.value.split(":").map(Number);
+  const [x, y] = (concSel.value || "1:1").split(":").map(Number);
   return x / y;
 }
 function showMode(newMode) {
@@ -944,9 +613,8 @@ function showMode(newMode) {
   modeBtn.classList.toggle("active", mode === "reverse");
   const D = dict();
   modeBtn.textContent = mode === "forward" ? D.modeForward : D.modeReverse;
-  setLangAttr(modeBtn, LANG); // ← add this
+  setLangAttr(modeBtn, LANG);
 }
-
 function setIfProvided(inputEl, val, fmt) {
   if (val == null || !isFinite(val)) return;
   inputEl.value = fmt ? fmt(val) : val;
@@ -956,16 +624,11 @@ function setIfProvided(inputEl, val, fmt) {
 function applyDrugDefaults(force = false) {
   const d = DRUG_INDEX[drugSel.value];
   if (!d) return;
-
-  // concentration default if invalid/missing or forced
   const allowed = Array.from(concSel.options).map((o) => o.value);
   if (force || !concSel.value || !allowed.includes(concSel.value)) {
-    if (d.defaultConc && allowed.includes(d.defaultConc)) {
+    if (d.defaultConc && allowed.includes(d.defaultConc))
       concSel.value = d.defaultConc;
-    }
   }
-
-  // forward-dose default if empty or forced (harmless in reverse)
   if (force || !P.value) {
     if (d.defaultP != null) P.value = to2(d.defaultP);
   }
@@ -1029,7 +692,6 @@ function recalc() {
     scheduleURLUpdate();
   }
 }
-
 function rangeLine(d, status) {
   const D = dict();
   const minTxt = d.pMin != null ? d.pMin.toFixed(2) : "—";
@@ -1044,14 +706,13 @@ function rangeLine(d, status) {
   )}`;
 }
 
-/* ------------------ QR generation & download ------------------ */
+/* ------------------ QR generation ------------------ */
 function downloadQRForCurrentLink() {
   const urlToEncode = buildURLWithParams();
   if (!window.QRCode) {
     alert("QR generator not loaded.");
     return;
   }
-
   qrContainer.innerHTML = "";
   const qr = new QRCode(qrContainer, {
     text: urlToEncode,
@@ -1061,7 +722,6 @@ function downloadQRForCurrentLink() {
     colorLight: "#ffffff",
     correctLevel: QRCode.CorrectLevel.H,
   });
-
   setTimeout(() => {
     let dataUrl = "";
     const canvas = qrContainer.querySelector("canvas");
@@ -1074,7 +734,6 @@ function downloadQRForCurrentLink() {
       alert("Failed to generate QR image.");
       return;
     }
-
     const fname = `infusion-qr_${drugSel.value}_${mode}.png`;
     const a = document.createElement("a");
     a.href = dataUrl;
@@ -1102,9 +761,9 @@ function attachEvents() {
   drugSel.addEventListener("change", () => {
     populateConcs();
     updateChip();
-    applyDrugDefaults(true); // switch to this drug’s defaults
+    applyDrugDefaults(true);
     recalc();
-    prepState = { ampIndex: null, total: null }; // reset selection when changing drug
+    prepState = { ampIndex: null, total: null };
     refreshPrepUI();
   });
 
@@ -1142,33 +801,53 @@ function attachEvents() {
   });
 }
 
-/* ------------------ Hydration from URL ------------------ */
+/* ------------------ Hydration + i18n text ------------------ */
+function localizePrepSection() {
+  const D = dict();
+  const prepTitleEl = document.querySelector("#prep summary strong");
+  if (prepTitleEl) {
+    prepTitleEl.textContent = D.prepTitle;
+    setLangAttr(prepTitleEl, LANG);
+  }
+  const rowLabels = document.querySelectorAll("#prep .prep-row .row-label");
+  if (rowLabels[0]) {
+    rowLabels[0].textContent = D.ampulesLabel;
+    setLangAttr(rowLabels[0], LANG);
+  }
+  if (rowLabels[1]) {
+    rowLabels[1].textContent = D.totalLabel;
+    setLangAttr(rowLabels[1], LANG);
+  }
+  if (rowLabels[2]) {
+    rowLabels[2].textContent = D.volumesLabel;
+    setLangAttr(rowLabels[2], LANG);
+  }
+  const volLabels = document.querySelectorAll(".prep-outputs label");
+  if (volLabels[0]) {
+    volLabels[0].textContent = D.drugNeeded;
+    setLangAttr(volLabels[0], LANG);
+  }
+  if (volLabels[1]) {
+    volLabels[1].textContent = D.solventNeeded;
+    setLangAttr(volLabels[1], LANG);
+  }
+}
 function hydrateFromURL() {
   const { drug, mode: m, conc, p, b, rate, lang } = getParamsFromURL();
-
-  // Language (also set <html lang> for Thai font)
   LANG = normalizeLang(lang);
-  //   document.documentElement.setAttribute("lang", LANG);
-  localizePrepSection(); // <- add this line
+  localizePrepSection();
 
-  // Drug
   const dId = drug && DRUG_INDEX[drug] ? drug : DRUGS[0].id;
   drugSel.value = dId;
   populateConcs();
   updateChip();
 
-  // Mode
   showMode(m);
-
-  // Apply defaults (only if missing); then override with URL if present/valid
   applyDrugDefaults(false);
-
-  if (conc && Array.from(concSel.options).some((o) => o.value === conc)) {
+  if (conc && Array.from(concSel.options).some((o) => o.value === conc))
     concSel.value = conc;
-  }
 
-  // Values
-  setIfProvided(B, b, to1); // single weight field used in both modes
+  setIfProvided(B, b, to1);
   if (mode === "forward") {
     setIfProvided(P, p, to2);
     if (rate != null && isFinite(rate)) Rate.value = to2(rate);
@@ -1178,29 +857,106 @@ function hydrateFromURL() {
   }
 }
 
-const DB_URL =
-  "https://script.google.com/macros/s/AKfycbx-Hj2g-8aeN72dM6XJtbOnwyZ9MivBXGBlVEF70XKtkT7O14KfBEAetHIHrCOLRp1ayA/exec"; // from Apps Script deployment
+/* ------------------ Swap DB (preserve selection) ------------------ */
+function rebuildSyns() {
+  for (const k of Object.keys(SYNS)) delete SYNS[k];
+  for (const d of DRUGS)
+    (d.synonyms || []).forEach((s) => (SYNS[s.toLowerCase()] = d.id));
+}
+function swapDbAndRefresh(newDrugs) {
+  const prevDrug = drugSel.value;
+  const prevConc = concSel.value;
 
-async function fetchDbJson() {
-  console.log("fetching");
-  const res = await fetch(DB_URL, { cache: "no-store" });
-  if (!res.ok) throw new Error(`Fetch DB failed: ${res.status}`);
-  const data = await res.json();
-  if (!data || !Array.isArray(data.drugs)) throw new Error("Bad DB payload");
-  return data;
+  DRUGS = newDrugs.slice();
+  DRUG_INDEX = Object.fromEntries(DRUGS.map((d) => [d.id, d]));
+  rebuildSyns();
+
+  populateDrugOptions();
+  drugSel.value = DRUG_INDEX[prevDrug] ? prevDrug : DRUGS[0]?.id || "";
+  populateConcs();
+  if (Array.from(concSel.options).some((o) => o.value === prevConc))
+    concSel.value = prevConc;
+  updateChip();
+  applyDrugDefaults(false);
+  refreshPrepUI();
+  recalc();
 }
 
-async function init() {
-  try {
-    const data = await fetchDbJson(); // ← reads JSON, not live sheet
-    DRUGS = data.drugs;
-    DRUG_INDEX = Object.fromEntries(DRUGS.map((d) => [d.id, d]));
-  } catch (err) {
-    console.warn("Falling back to local DB:", err);
-    DRUGS = DEFAULT_DRUGS;
-    DRUG_INDEX = Object.fromEntries(DRUGS.map((d) => [d.id, d]));
+/* ------------------ JSON DB validation (log-only) ------------------ */
+function validateDB(drugs) {
+  const problems = [];
+  const ids = new Set();
+  for (const d of drugs) {
+    if (!d.id) problems.push(`Drug missing id`);
+    if (ids.has(d.id)) problems.push(`Duplicate id: ${d.id}`);
+    ids.add(d.id);
+    if (d.pMax === 0)
+      problems.push(`Suspicious pMax=0 for ${d.id}. Leave blank for "no max".`);
+    for (const c of d.conc || []) {
+      if (!/^\d+(\.\d+)?:\d+(\.\d+)?$/.test(c))
+        problems.push(`Bad conc "${c}" in ${d.id}`);
+    }
+    for (const c of Object.keys(d.prepVolumesByConc || {})) {
+      if (!/^\d+(\.\d+)?:\d+(\.\d+)?$/.test(c))
+        problems.push(`Bad prep conc "${c}" in ${d.id}`);
+      const totals = d.prepVolumesByConc[c] || [];
+      if (totals.some((t) => !(Number.isInteger(t) && t > 0))) {
+        problems.push(
+          `Bad totals for ${d.id} @ ${c}: ${JSON.stringify(totals)}`
+        );
+      }
+    }
+    if (
+      Object.keys(d.prepVolumesByConc || {}).length &&
+      (!d.ampules || !d.ampules.length)
+    ) {
+      problems.push(`No ampules for ${d.id} but prep totals exist.`);
+    }
   }
+  if (problems.length)
+    console.warn(
+      `[schema] ${problems.length} issues:\n - ` + problems.join("\n - ")
+    );
+  return problems.length === 0;
+}
 
+/* ------------------ Refresh flow ------------------ */
+async function refreshDatabase(manual = false) {
+  if (dbLoading) return;
+  dbLoading = true;
+  setDbStatus("loading");
+
+  try {
+    const data = await fetchDbJson();
+    if (validateDB(data.drugs)) {
+      swapDbAndRefresh(data.drugs);
+      DB_META = {
+        source: "remote",
+        lastUpdated: data.dataVersion || new Date().toISOString(),
+        version: data.schemaVersion ?? null,
+      };
+      setDbStatus("live");
+    } else {
+      console.warn("DB validation problems; keeping current data.");
+      setDbStatus("error", "Validation issues (see console)");
+    }
+  } catch (e) {
+    console.warn("DB refresh failed:", e);
+    if (manual) alert("Failed to refresh database.\nUsing built-in data.");
+    if (DRUGS === DEFAULT_DRUGS) setDbStatus("local");
+    else setDbStatus("error", "Refresh failed");
+  } finally {
+    dbLoading = false;
+  }
+}
+
+/* ------------------ Init (instant UI, then upgrade DB) ------------------ */
+function initInstantUI() {
+  // Start with built-in data so UI is responsive immediately
+  DRUGS = DEFAULT_DRUGS.slice();
+  DRUG_INDEX = Object.fromEntries(DRUGS.map((d) => [d.id, d]));
+
+  initDbBar(); // in-card status bar (requires HTML snippet)
   populateDrugOptions();
   attachEvents();
   hydrateFromURL();
@@ -1210,4 +966,10 @@ async function init() {
   recalc();
   updateShareLink();
 }
+
+async function init() {
+  initInstantUI(); // render instantly with built-in data
+  refreshDatabase(); // then upgrade asynchronously to the live DB
+}
+
 init();
